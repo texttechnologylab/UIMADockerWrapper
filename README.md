@@ -5,6 +5,15 @@ To use the implementation one to include the project with the maven command:
 ```
 mvn install -DskipTests
 ```
+
+Then add to your project:
+```
+<dependency>
+  <groupId>org.hucompute</groupId>
+  <artifactId>reproannotationnlp</artifactId>
+  <version>0.1</version>
+</dependency>
+```
 The tests take ages to complete on may not run all at any given moment.
 
 
