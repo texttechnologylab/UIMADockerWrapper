@@ -1,0 +1,48 @@
+<typeSystemDescription xmlns="http://uima.apache.org/resourceSpecifier">
+    <name>PipelineAnnotatorTypeSystem</name>
+    <description>Type System Definition for the PipelineAnnotator</description>
+    <version>1.0</version>
+    <vendor>Text Technology Lab</vendor>
+    <types>
+        <typeDescription>
+            <name>org.hucompute.reproannotationnlp.ReproducibleAnnotation</name>
+            <description>An docker and engine anntation for an annotator</description>
+            <supertypeName>uima.tcas.Annotation</supertypeName>
+            <features>
+
+                <featureDescription>
+                    <name>configuration_hash</name>
+                    <description>The hash of the configuration setup</description>
+                    <rangeTypeName>uima.cas.Long</rangeTypeName>
+                </featureDescription>
+                <featureDescription>
+                    <name>compression</name>
+                    <rangeTypeName>uima.cas.String</rangeTypeName>
+                </featureDescription>
+                <featureDescription>
+                    <name>configuration</name>
+                    <description>The configuration for the annotation, containing the dockerfile etc.</description>
+                    <rangeTypeName>uima.cas.String</rangeTypeName>
+                </featureDescription>
+                <featureDescription>
+                    <name>timestamp</name>
+                    <description>The timestamp of the annotation given in ms since epoch.</description>
+                    <rangeTypeName>uima.cas.Long</rangeTypeName>
+                </featureDescription>
+            </features>
+        </typeDescription>
+        <typeDescription>
+
+            <name>org.hucompute.reproannotationnlp.ReproducibleAnnotationHash</name>
+            <description>An docker and engine anntation for an annotator</description>
+            <supertypeName>uima.tcas.Annotation</supertypeName>
+            <features>
+                <featureDescription>
+                    <name>configuration_crc32</name>
+                    <description>The crc32 of the jcas</description>
+                    <rangeTypeName>uima.cas.Long</rangeTypeName>
+                </featureDescription>
+            </features>
+        </typeDescription>
+    </types>
+</typeSystemDescription>

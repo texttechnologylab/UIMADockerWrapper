@@ -1,0 +1,10 @@
+target/*
+corpora/*
+.idea/*
+.project
+.classpath
+.settings/*
+*.db
+*.db-journal
+*.log
+*.json
