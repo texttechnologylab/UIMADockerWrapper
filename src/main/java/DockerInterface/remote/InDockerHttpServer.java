@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class InDockerHttpServer {
-    static public void main(String []args) throws IOException, UIMAException {
+    static public void main(String []args) throws IOException, UIMAException, ClassNotFoundException {
         HttpServer server = HttpServer.create(new InetSocketAddress(9714), 0);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
@@ -24,7 +24,9 @@ public class InDockerHttpServer {
                 server.stop(0);
             }
         });
-        server.createContext("/process", new InContainerEngineProcessor(new String(Files.readAllBytes(Paths.get("configuration.reproanno")), StandardCharsets.UTF_8)));
+        InContainerEngineProcessor proc = new InContainerEngineProcessor(new String(Files.readAllBytes(Paths.get("configuration.reproanno")), StandardCharsets.UTF_8));
+        server.createContext("/process", proc);
+        server.createContext("/set_typesystem", proc);
         server.setExecutor(null);
         server.start();
         System.out.printf("Server started on port %d\n",9714);

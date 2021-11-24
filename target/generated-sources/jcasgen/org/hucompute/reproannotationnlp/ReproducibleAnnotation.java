@@ -1,6 +1,6 @@
 
 
-/* First created by JCasGen Mon Nov 22 23:48:21 CET 2021 */
+/* First created by JCasGen Wed Nov 24 13:14:00 CET 2021 */
 package org.hucompute.reproannotationnlp;
 
 import org.apache.uima.jcas.JCas; 
@@ -11,7 +11,7 @@ import org.apache.uima.jcas.tcas.Annotation;
 
 
 /** An docker and engine anntation for an annotator
- * Updated by JCasGen Mon Nov 22 23:48:21 CET 2021
+ * Updated by JCasGen Wed Nov 24 13:14:00 CET 2021
  * XML source: /home/alexander/Documents/ReproducibleUIMAAnnotations/target/jcasgen/typesystem.xml
  * @generated */
 public class ReproducibleAnnotation extends Annotation {

@@ -96,19 +96,17 @@ public class DockerWrapperTest {
     @Test
     void TestRunInContainerWithAutoremove() throws UIMAException, IOException, SAXException {
         //This runs the specified engine not in an container but in the host system
-        TypeSystemDescription desc = TypeSystemDescriptionFactory.createTypeSystemDescriptionFromPath("/home/alexander/Documents/BachelorThesis/target/jcasgen/typesystem.xml");
+        //TypeSystemDescription desc = TypeSystemDescriptionFactory.createTypeSystemDescriptionFromPath("/home/alexander/Documents/BachelorThesis/target/jcasgen/typesystem.xml");
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration
                 .default_config()
                 .with_run_in_container(true)
-                .with_container_name("experiment_v1.1_date_14_11_2021")
                 .with_container_autoremove(true);
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(AnalysisEngineFactory.createEngineDescription(
-                ExampleAnnotator.class,
-                ExampleAnnotator.PARAM_PIPELINE_CONFIGURATION, ""
+                BreakIteratorSegmenter.class
         ));
         env.with_pomfile(new File("pom.xml"));
 
-        JCas jc = JCasFactory.createJCas(desc);
+        JCas jc = JCasFactory.createJCas();
         jc.setDocumentText("This is a very simple text.");
         jc.setDocumentLanguage("en");
 
@@ -176,7 +174,7 @@ public class DockerWrapperTest {
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration
                 .default_config()
                 .with_gpu(true)
-                .with_unsafe_running_container_id("c46203e5ec52");
+                .with_unsafe_running_container_id("c63e8a4f9f3d");
 
         JCas jc = JCasFactory.createJCas();
         jc.setDocumentText("This is a very simple text.");

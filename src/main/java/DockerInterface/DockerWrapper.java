@@ -8,6 +8,7 @@ import DockerInterface.modules.DockerWrapperModuleErrorImplementation;
 import DockerInterface.modules.IDockerWrapperModule;
 import DockerInterface.remote.InContainerEngineProcessor;
 import DockerInterface.util.DockerWrapperUtil;
+import de.tudarmstadt.ukp.dkpro.core.api.metadata.type.DocumentMetaData;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -28,6 +29,7 @@ import org.apache.uima.cas.impl.XCASSerializer;
 import org.apache.uima.fit.component.JCasAnnotator_ImplBase;
 import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.factory.AggregateBuilder;
+import org.apache.uima.fit.factory.JCasFactory;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
@@ -269,6 +271,25 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                     }
                 }
                 System.out.println("Container up and running!");
+                System.out.println("Setting typesystem now!");
+                {
+                    HttpClient httpclient = HttpClients.createDefault();
+                    HttpPost httppost = new HttpPost(String.format("http://%s:%s/set_typesystem",_docker_interface.get_ip(),String.valueOf(dockerport)));
+                    ByteArrayOutputStream arr = new ByteArrayOutputStream();
+                    JCas aJCas = JCasFactory.createJCas();
+                    CasIOUtils.save(aJCas.getCas(),arr, SerialFormat.COMPRESSED_TSI);
+                    HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.DEFAULT_BINARY);
+                    httppost.setEntity(entity);
+
+
+                    HttpResponse httpresp = httpclient.execute(httppost);
+                    HttpEntity respentity = httpresp.getEntity();
+
+                    if(httpresp.getStatusLine().getStatusCode() != 200) {
+                        System.err.println("Could not set container typesystem!");
+                        throw new ResourceInitializationException();
+                    }
+                }
             }
             else {
                 _processor = new InContainerEngineProcessor(_cfg_string);
@@ -373,7 +394,7 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                 HttpClient httpclient = HttpClients.createDefault();
                 HttpPost httppost = new HttpPost(_containerurl);
                 ByteArrayOutputStream arr = new ByteArrayOutputStream();
-                CasIOUtils.save(aJCas.getCas(),arr, SerialFormat.COMPRESSED_TSI);
+                CasIOUtils.save(aJCas.getCas(),arr, SerialFormat.SERIALIZED);
                 HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.DEFAULT_BINARY);
                 httppost.setEntity(entity);
 
@@ -395,7 +416,7 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                 if (respentity != null) {
                     InputStream instream = respentity.getContent();
                     byte []kk = IOUtils.toByteArray(instream);
-                    CasIOUtils.load(new ByteArrayInputStream(kk),aJCas.getCas());
+                    CasIOUtils.load(new ByteArrayInputStream(kk),null,aJCas.getCas(),CasLoadMode.DEFAULT);
                 }
                 else {
                     throw new AnalysisEngineProcessException();

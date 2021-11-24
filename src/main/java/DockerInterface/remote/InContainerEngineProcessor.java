@@ -14,10 +14,9 @@ import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.analysis_engine.metadata.SofaMapping;
-import org.apache.uima.cas.CASException;
-import org.apache.uima.cas.FeatureStructure;
-import org.apache.uima.cas.SerialFormat;
+import org.apache.uima.cas.*;
 import org.apache.uima.cas.impl.Serialization;
+import org.apache.uima.cas.impl.TypeSystemUtils;
 import org.apache.uima.cas.impl.XCASSerializer;
 import org.apache.uima.fit.factory.AnalysisEngineFactory;
 import org.apache.uima.fit.factory.JCasFactory;
@@ -26,6 +25,7 @@ import org.apache.uima.fit.util.CasUtil;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.Sofa;
+import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.metadata.TypeSystemDescription;
 import org.apache.uima.util.*;
@@ -53,11 +53,13 @@ public class InContainerEngineProcessor implements HttpHandler {
     public String _cfg_string;
     public long _cfg_hash;
     public SofaMapping[] _mappings;
-    public TypeSystemDescription _type_desc;
+    public TypeSystem _last_used_typesystem;
+    public JCas _runner;
 
     public InContainerEngineProcessor(String configuration) throws UIMAException, IOException {
-        _sys = TypeSystemDescriptionFactory.createTypeSystemDescription("types.ReproducibleAnnotation");
         try {
+            _runner = JCasFactory.createJCas((TypeSystemDescription) null);
+            _last_used_typesystem = _runner.getTypeSystem();
             _cfg_string = configuration;
             _configuration = DockerWrappedEnvironment.from(_cfg_string);
             if(!_configuration.get_compression().equals("")) {
@@ -158,24 +160,26 @@ public class InContainerEngineProcessor implements HttpHandler {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         try {
-            JCas jc = JCasFactory.createJCas(_sys);
-            jc.reset();
-            CasIOUtils.load(t.getRequestBody(),jc.getCas());
-
-            process(jc);
+            if(t.getRequestURI().toString().contains("/set_typesystem")) {
+                _runner.reset();
+                CasIOUtils.load(t.getRequestBody(),null,_runner.getCas(),CasLoadMode.REINIT);
+                JCas new_cas = JCasFactory.createJCas(TypeSystemUtil.typeSystem2TypeSystemDescription(_runner.getTypeSystem()));
+                _runner = new_cas;
+                t.sendResponseHeaders(200, 0);
+                return;
+            }
+            _runner.reset();
+            CasIOUtils.load(t.getRequestBody(),_runner.getCas());
+            process(_runner);
 
             org.apache.commons.io.output.ByteArrayOutputStream out = new org.apache.commons.io.output.ByteArrayOutputStream();
-            CasIOUtils.save(jc.getCas(),out, SerialFormat.COMPRESSED_TSI);
+            CasIOUtils.save(_runner.getCas(),out, SerialFormat.SERIALIZED);
             t.sendResponseHeaders(200, out.toByteArray().length);
             OutputStream os = t.getResponseBody();
             os.write(out.toByteArray());
             out.close();
             os.close();
             return;
-        } catch (ResourceInitializationException e) {
-            e.printStackTrace(pw);
-        } catch (CASException e) {
-            e.printStackTrace(pw);
         } catch (AnalysisEngineProcessException e) {
             e.printStackTrace(pw);
         } catch(Exception e) {

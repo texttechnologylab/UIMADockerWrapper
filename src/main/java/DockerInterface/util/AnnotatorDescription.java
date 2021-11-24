@@ -1,6 +1,5 @@
 package DockerInterface.util;
 
-import edu.stanford.nlp.util.Pair;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.metadata.SofaMapping;
 import org.apache.uima.fit.factory.SofaMappingFactory;
