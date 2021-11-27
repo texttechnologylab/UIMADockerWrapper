@@ -3,6 +3,7 @@ package DockerInterface;
 import DockerInterface.database.DatabaseInterface;
 import DockerInterface.database.DatabaseSQLite;
 import DockerInterface.modules.IDockerWrapperModule;
+import org.apache.uima.cas.SerialFormat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -77,6 +78,11 @@ public class DockerWrapperContainerConfiguration {
     private String _running_container_id;
 
     /**
+     * Defines how the pipeline should be scaled.
+     */
+    private int _scale;
+
+    /**
      * Creates the default DockerWrapperConfiguration. This includes confirm_integrity = true, run in container = true,
      * container name = "", use gpu = true, autoremove = true, export name = "", reuse container = false, module classes empty,
      * initialise timeout = 20, running container id = "", map daemon = false
@@ -111,6 +117,7 @@ public class DockerWrapperContainerConfiguration {
         _container_initialise_timeout = 20;
         _running_container_id = "";
         _map_daemon = false;
+        _scale = 1;
     }
 
     /**
@@ -128,6 +135,7 @@ public class DockerWrapperContainerConfiguration {
         _container_initialise_timeout = js.getInt("timeout");
         _running_container_id = js.getString("container_address");
         _map_daemon = js.getBoolean("map_daemon");
+        _scale = js.getInt("scaleout");
 
         _module_classes = new LinkedList<String>();
         JSONArray arr = js.getJSONArray("modules");
@@ -160,6 +168,7 @@ public class DockerWrapperContainerConfiguration {
         obj.put("timeout",_container_initialise_timeout);
         obj.put("container_address",_running_container_id);
         obj.put("map_daemon",_map_daemon);
+        obj.put("scalout",_scale);
         return obj.toString();
     }
 
@@ -193,6 +202,15 @@ public class DockerWrapperContainerConfiguration {
         _module_classes.add(clazz.getName());
         _module_configs.add("");
         return this;
+    }
+
+    public DockerWrapperContainerConfiguration with_scaleout(int factor) {
+        _scale = factor;
+        return this;
+    }
+
+    public int getContainerScalout() {
+        return _scale;
     }
 
     /**

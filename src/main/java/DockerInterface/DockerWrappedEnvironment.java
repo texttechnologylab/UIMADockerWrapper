@@ -25,11 +25,13 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Paths;
+import java.security.InvalidParameterException;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
 
@@ -40,14 +42,10 @@ import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDesc
  */
 public class DockerWrappedEnvironment {
     /**
-     * The string representation of the dockerfile used to build the container
+     * The Map is dividided like this: Map<The path in the container, the content of the ressource>.
      */
-    private String _dockerfile;
+    private Map<String,byte[]> _ressources;
 
-    /**
-     * The string representation of the pom file used to install the dependencies in the maven file
-     */
-    private String _pom_file;
 
     /**
      * The string representation of the AnalysisEngineDescription
@@ -74,7 +72,30 @@ public class DockerWrappedEnvironment {
      */
     private String _to_view;
 
+    /**
+     * The timestamp this variable is only set if the DockerWrappedEnvironment was deserialized from a Annotation
+     */
     long _timestamp;
+
+    /**
+     * This describes string ressources which is encoded in UTF-8
+     */
+    public static final String RESSOURCE_TYPE_STRING = "string:";
+
+    /**
+     * This describes a binary ressource encoded in Base85
+     */
+    public static final String RESSOURCE_TYPE_BINARY = "binary:";
+
+    /**
+     * This describes a zip byte array encoded in Base85
+     */
+    public static final String RESSOURCE_TYPE_ZIP = "zip:";
+
+    /**
+     * This describes a Regex match pattern which matches every ressource prefix
+     */
+    public static final String RESSOURCE_REGEX_MATCH = "[a-z]*:";
 
     /**
      * Creates a new wrapped environment from 1..n AnalysisEngineDescriptions
@@ -97,7 +118,8 @@ public class DockerWrappedEnvironment {
      * @throws IOException
      */
     public static DockerWrappedEnvironment from(String base) throws InvalidXMLException, IOException {
-        return new DockerWrappedEnvironment(base);
+        DockerWrappedEnvironment dockerWrappedEnvironment = new DockerWrappedEnvironment(base);
+        return dockerWrappedEnvironment;
     }
 
     /**
@@ -105,9 +127,10 @@ public class DockerWrappedEnvironment {
      * with maven installed. The default pom file installs this library and the dependencies of it.
      */
     private DockerWrappedEnvironment(AnalysisEngineDescription base, AnalysisEngineDescription ...others) throws ResourceInitializationException, IOException, SAXException, InvalidXMLException {
-        _dockerfile =   new DockerBaseJavaEnv().get_assembled_dockerfile();
         _to_view = "";
-        _pom_file = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+        _ressources = new HashMap<String,byte[]>();
+        withResource("dockerfile", new DockerBaseJavaEnv().get_assembled_dockerfile());
+        withResource("pom.xml","<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n" +
                 "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
                 "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n" +
@@ -134,7 +157,7 @@ public class DockerWrappedEnvironment {
                 "  </repositories>\n" +
                 "  <dependencies>\n"+
                 "  </dependencies>\n" +
-                "</project>";
+                "</project>");
         _name = "unnamed";
         _compression = CompressorStreamFactory.XZ;
 
@@ -165,7 +188,7 @@ public class DockerWrappedEnvironment {
      * @return The string representation of the currently set pomfile
      */
     public String get_pomfile() {
-        return _pom_file;
+        return getResourceString("pom.xml","");
     }
 
     /**
@@ -173,9 +196,168 @@ public class DockerWrappedEnvironment {
      * @return The string representation of the currently set dockerfile.
      */
     public String get_dockerfile() {
-        return _dockerfile;
+        return getResourceString("dockerfile","");
     }
 
+    public byte[] getResourceBinary(String name) {
+        return _ressources.get("binary:"+name);
+    }
+
+    public byte[] getResourceBinary(String name, byte[] defaultValue) {
+        byte[] result =  _ressources.get(RESSOURCE_TYPE_BINARY+name);
+        if(result!=null) {
+            return result;
+        }
+        return defaultValue;
+    }
+
+    public String getResourceString(String name, String default_value) {
+        byte[] result =  _ressources.get(RESSOURCE_TYPE_STRING+name);
+        if(result!=null) {
+            return new String(result,StandardCharsets.UTF_8);
+        }
+        else {
+            return default_value;
+        }
+    }
+
+    public String getResourceString(String name) {
+        byte[] result =  _ressources.get(RESSOURCE_TYPE_STRING+name);
+        if(result!=null) {
+            return new String(result,StandardCharsets.UTF_8);
+        }
+        else {
+            return null;
+        }
+    }
+
+    /**
+     * Adds a ressource to the wrapped environment
+     * @param path The path in the container to write the ressource to.
+     * @param content The content of the ressource.
+     */
+    public DockerWrappedEnvironment withResource(String path, String content) {
+        _ressources.put(RESSOURCE_TYPE_STRING+path,content.getBytes(StandardCharsets.UTF_8));
+        return this;
+    }
+
+    public DockerWrappedEnvironment withResource(String path, byte[] content) {
+        _ressources.put(RESSOURCE_TYPE_BINARY+path,content);
+        return this;
+    }
+
+    private void zipDirectory(File dir, String parentPath, ZipOutputStream zos) throws IOException {
+        for(File file: dir.listFiles()) {
+            if(file.isDirectory()) {
+                zipDirectory(file,Paths.get(parentPath,file.getName()).toString(), zos);
+            }
+            else {
+                zos.putNextEntry(new ZipEntry(Paths.get(parentPath, file.getName()).toString()));
+                zos.write(Files.readAllBytes(Paths.get(parentPath, file.getName())));
+                zos.closeEntry();
+            }
+        }
+    }
+
+    public DockerWrappedEnvironment withResource(String path, File file) throws IOException {
+        ByteArrayOutputStream arr = new ByteArrayOutputStream();
+        ZipOutputStream out = new ZipOutputStream(arr);
+        if(file.isFile()) {
+            _ressources.put(RESSOURCE_TYPE_BINARY+path,Files.readAllBytes(file.toPath()));
+            return this;
+        }
+        else if(file.isDirectory()) {
+            zipDirectory(file,file.getName(),out);
+        }
+        out.close();
+        _ressources.put(RESSOURCE_TYPE_ZIP+path,arr.toByteArray());
+        return this;
+    }
+
+    /**
+     * Erases the key from the given map
+     * @param key The key to erase.
+     */
+    public DockerWrappedEnvironment eraseResource(String key) {
+        _ressources.remove(key);
+        return this;
+    }
+
+    /**
+     * Taken from https://www.baeldung.com/java-compress-and-uncompress
+     * @param destinationDir
+     * @param zipEntry
+     * @return
+     * @throws IOException
+     */
+    public static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
+        File destFile = new File(destinationDir, zipEntry.getName());
+
+        String destDirPath = destinationDir.getCanonicalPath();
+        String destFilePath = destFile.getCanonicalPath();
+
+        if (!destFilePath.startsWith(destDirPath + File.separator)) {
+            throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
+        }
+
+        return destFile;
+    }
+
+    /**
+     * Writes the resources defined to a given directory
+     * @param dir The directory to write the resources to.
+     * @throws IOException
+     */
+    public void writeRessourceToDirectory(File dir) throws IOException {
+        if(!dir.isDirectory()) {
+            throw new IllegalArgumentException();
+        }
+
+        for(Map.Entry<String,byte[]> entry : _ressources.entrySet()) {
+            String cleanName = entry.getKey().replaceFirst(RESSOURCE_REGEX_MATCH,"");
+            switch(entry.getKey().substring(0,entry.getKey().indexOf(":")+1)) {
+                case RESSOURCE_TYPE_STRING:
+                case RESSOURCE_TYPE_BINARY:
+                    Files.write(Paths.get(dir.getPath(), cleanName), entry.getValue());
+                    break;
+                case RESSOURCE_TYPE_ZIP:
+                    File target=Paths.get(dir.getPath(),entry.getKey().replaceFirst(RESSOURCE_REGEX_MATCH,"")).toFile();
+                    target.mkdirs();
+
+                    ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(entry.getValue()));
+                    ZipEntry zipEntry = zis.getNextEntry();
+                    while (zipEntry != null) {
+                        File dest = newFile(target,zipEntry);
+                        if(zipEntry.isDirectory()) {
+                            if(!dest.mkdirs()) {
+                                throw new IOException("Failed to create directory " + dest.getPath());
+                            }
+                        }
+                        else {
+                            // fix for Windows-created archives taken from https://www.baeldung.com/java-compress-and-uncompress
+                            File parent = dest.getParentFile();
+                            if (!parent.isDirectory() && !parent.mkdirs()) {
+                                throw new IOException("Failed to create directory " + parent);
+                            }
+
+                            FileOutputStream fos = new FileOutputStream(dest);
+                            int len;
+                            byte[] buffer = new byte[4096];
+                            while ((len = zis.read(buffer)) > 0) {
+                                fos.write(buffer, 0, len);
+                            }
+                            fos.close();
+                        }
+                        zipEntry = zis.getNextEntry();
+                    }
+                    zis.closeEntry();
+                    zis.close();
+                    break;
+                default:
+                    throw new InvalidParameterException();
+            }
+        }
+    }
 
     /**
      * Returns the name which was given to the particular environment, this can be used to remind onself what kind of pipelines or experiments
@@ -231,10 +413,27 @@ public class DockerWrappedEnvironment {
         JSONObject js = new JSONObject(config);
         _engine_serialized = js.getString("engine");
         _name = js.getString("name");
-        _pom_file = js.getString("pom_file");
-        _dockerfile = js.getString("dockerfile");
         _compression = js.getString("compression");
         _to_view = js.getString("to_view");
+
+        _ressources = new HashMap<>();
+        JSONObject resources = js.getJSONObject("resources");
+        for(String key: resources.keySet()) {
+            String result = resources.getString(key);
+            switch(key.substring(0,key.indexOf(":")+1)) {
+                case RESSOURCE_TYPE_STRING:
+                    _ressources.put(key,result.getBytes(StandardCharsets.UTF_8));
+                    break;
+                case RESSOURCE_TYPE_BINARY:
+                case RESSOURCE_TYPE_ZIP:
+                    _ressources.put(key, jBaseZ85.decode(result));
+                    break;
+                default:
+                    System.err.println(key);
+                    throw new InvalidParameterException();
+            }
+        }
+
         Path tmpfile = Files.createTempFile("reproanno",".xml");
         Files.write(tmpfile, _engine_serialized.getBytes(StandardCharsets.UTF_8));
         _engine = AnalysisEngineFactory.createEngineDescriptionFromPath(tmpfile.toString());
@@ -358,7 +557,9 @@ public class DockerWrappedEnvironment {
                 DockerWrapper.PARAM_REUSE_CONTAINER, container_config.get_reuse_container(),
                 DockerWrapper.PARAM_ADDITIONAL_MODULES, container_config.get_additional_modules(),
                 DockerWrapper.PARAM_MAP_DOECKER_DAEMON, container_config.get_unsafe_map_docker_daemon(),
-                DockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations());
+                DockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations(),
+                DockerWrapper.PARAM_CONTAINER_TIMEOUT, container_config.get_container_initialise_timeout(),
+                DockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, container_config.getContainerScalout());
     }
 
     /**
@@ -367,8 +568,7 @@ public class DockerWrappedEnvironment {
      * @return A reference to itself to chain the functions
      */
     public DockerWrappedEnvironment with_dockerfile(String dockerfile) {
-        _dockerfile = dockerfile;
-        return this;
+        return withResource("dockerfile",dockerfile);
     }
 
     /**
@@ -377,8 +577,7 @@ public class DockerWrappedEnvironment {
      * @return A reference to itself to better enable function chaining
      */
     public DockerWrappedEnvironment with_dockerfile(IDockerBaseEnv env) {
-        _dockerfile = env.get_assembled_dockerfile();
-        return this;
+        return withResource("dockerfile",env.get_assembled_dockerfile());
     }
 
     /**
@@ -388,8 +587,7 @@ public class DockerWrappedEnvironment {
      * @throws IOException
      */
     public DockerWrappedEnvironment with_dockerfile(File dockerfile) throws IOException {
-        _dockerfile = new String(Files.readAllBytes(dockerfile.toPath()));
-        return this;
+        return withResource("dockerfile",new String(Files.readAllBytes(dockerfile.toPath())));
     }
 
     /**
@@ -398,8 +596,7 @@ public class DockerWrappedEnvironment {
      * @return A reference to itself to better enable function chaining
      */
     public DockerWrappedEnvironment with_pomfile(String pomfile) {
-        _pom_file = pomfile;
-        return this;
+        return withResource("pom.xml",pomfile);
     }
 
     private void get_descriptions_depth(AnalysisEngineDescription subject, List<AnnotatorDescription> lst) throws InvalidXMLException {
@@ -476,8 +673,7 @@ public class DockerWrappedEnvironment {
      * @throws IOException
      */
     public DockerWrappedEnvironment with_pomfile(File pomfile) throws IOException {
-        _pom_file = new String(Files.readAllBytes(pomfile.toPath()));
-        return this;
+        return withResource("pom.xml",new String(Files.readAllBytes(pomfile.toPath())));
     }
 
     private DockerWrappedEnvironment update() throws IOException, SAXException {
@@ -493,12 +689,26 @@ public class DockerWrappedEnvironment {
      */
     public String toJsonString() throws IOException, SAXException {
         JSONObject js = new JSONObject();
-        js.put("dockerfile",_dockerfile);
-        js.put("pom_file",_pom_file);
         js.put("engine",get_engine_string_description());
         js.put("name",_name);
         js.put("compression",_compression);
         js.put("to_view",_to_view);
+        JSONObject resources = new JSONObject();
+        for(Map.Entry<String,byte[]> entries: _ressources.entrySet()) {
+            switch(entries.getKey().substring(0,entries.getKey().indexOf(":")+1)) {
+                case RESSOURCE_TYPE_BINARY:
+                case RESSOURCE_TYPE_ZIP:
+                    resources.put(entries.getKey(), jBaseZ85.encode(entries.getValue()));
+                    break;
+                case RESSOURCE_TYPE_STRING:
+                    resources.put(entries.getKey(), new String(entries.getValue(), StandardCharsets.UTF_8));
+                    break;
+                default:
+                    System.err.println(entries.getKey());
+                    throw new InvalidParameterException();
+            }
+        }
+        js.put("resources",resources);
         return js.toString();
     }
 }

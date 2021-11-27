@@ -18,6 +18,10 @@ public class ExampleAnnotator extends JCasAnnotator_ImplBase {
     @ConfigurationParameter(name = PARAM_PIPELINE_CONFIGURATION, mandatory = true,defaultValue = "")
     private String whatever;
 
+    public static final String PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS = "TEXTTECHNOLOGYLAB_ASYNC_SCALEOUT_SIZE";
+    @ConfigurationParameter(name=PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, mandatory = true, defaultValue = "4")
+    private int _async_scalout;
+
     @Override
     public void initialize(UimaContext aContext) throws ResourceInitializationException {
         super.initialize(aContext);

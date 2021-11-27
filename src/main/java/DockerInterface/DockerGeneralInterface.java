@@ -2,15 +2,13 @@ package DockerInterface;
 import com.fasterxml.jackson.core.JsonParser;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
-import com.github.dockerjava.api.command.BuildImageResultCallback;
-import com.github.dockerjava.api.command.CreateContainerCmd;
-import com.github.dockerjava.api.command.CreateContainerResponse;
-import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.command.*;
 import com.github.dockerjava.api.exception.DockerClientException;
 import com.github.dockerjava.api.model.*;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.command.CreateContainerCmdImpl;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
+import com.github.dockerjava.core.command.PushImageResultCallback;
 import com.google.common.collect.ImmutableList;
 import jdk.nashorn.internal.parser.JSONParser;
 import org.apache.http.impl.client.HttpClients;
@@ -199,6 +197,48 @@ public class DockerGeneralInterface {
         }
     }
 
+    public String run_service(String imagename, int scale) throws InterruptedException {
+        _docker.tagImageCmd(imagename,"localhost/reproducibleanno",imagename).exec();
+        ServiceSpec spec = new ServiceSpec();
+        ServiceModeConfig cfg = new ServiceModeConfig();
+        ServiceReplicatedModeOptions opts = new ServiceReplicatedModeOptions();
+        cfg.withReplicated(opts.withReplicas(scale));
+        spec.withMode(cfg);
+
+        TaskSpec task = new TaskSpec();
+        ContainerSpec cont = new ContainerSpec();
+        cont = cont.withImage("localhost/reproducibleanno:"+imagename);
+        task.withContainerSpec(cont);
+
+        spec.withTaskTemplate(task);
+        EndpointSpec end = new EndpointSpec();
+        List<PortConfig> portcfg = new LinkedList<>();
+        portcfg.add(new PortConfig().withTargetPort(9714).withPublishMode(PortConfig.PublishMode.ingress));
+        end.withPorts(portcfg);
+        spec.withEndpointSpec(end);
+        System.out.printf("Spawning %d service replicas",scale);
+        CreateServiceResponse cmd = _docker.createServiceCmd(spec).exec();
+        return cmd.getId();
+    }
+
+    public int extract_service_port_mapping(String service) throws InterruptedException {
+        Thread.sleep(1000);
+        Service cmd = _docker.inspectServiceCmd(service).exec();
+        Endpoint end = cmd.getEndpoint();
+        for(PortConfig p : end.getPorts()) {
+            return p.getPublishedPort();
+        }
+        return -1;
+    }
+
+    public String build(Path builddir) {
+        String img_id = _docker.buildImageCmd().withPull(true)
+                .withBaseDirectory(builddir.toFile())
+                .withDockerfile(Paths.get(builddir.toString(),"dockerfile").toFile())
+                .exec(new BuildImageProgress()).awaitImageId();
+        return img_id;
+    }
+
     /**
      * Builds and runs the container with a specified temporary build directory and some flags.
      * @param builddir The temporary build directory to build the container from
@@ -210,7 +250,7 @@ public class DockerGeneralInterface {
      * @return The docker container id
      * @throws InterruptedException
      */
-    public String build_and_run(Path builddir, boolean gpu, boolean autoremove, boolean reuse_container, String containername,
+    public String run(String imageid, boolean gpu, boolean autoremove, boolean reuse_container, String containername,
                                 boolean map_daemon) throws InterruptedException {
         if(reuse_container) {
             List<Container> containers = _docker.listContainersCmd().withShowAll(true).exec();
@@ -223,12 +263,6 @@ public class DockerGeneralInterface {
                 }
             }
         }
-
-
-        String img_id = _docker.buildImageCmd().withPull(true)
-                .withBaseDirectory(builddir.toFile())
-                .withDockerfile(Paths.get(builddir.toString(),"dockerfile").toFile())
-                .exec(new BuildImageProgress()).awaitImageId();
 
         HostConfig cfg = new HostConfig();
         if(autoremove) {
@@ -243,7 +277,7 @@ public class DockerGeneralInterface {
             cfg.withBinds(Bind.parse("/var/run/docker.sock:/var/run/docker.sock"));
         }
 
-        CreateContainerCmd cmd = _docker.createContainerCmd(img_id)
+        CreateContainerCmd cmd = _docker.createContainerCmd(imageid)
                 .withHostConfig(cfg)
                 .withExposedPorts(ExposedPort.tcp(9714)).withPublishAllPorts(true);
 

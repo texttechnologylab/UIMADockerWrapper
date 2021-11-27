@@ -6,32 +6,23 @@ import com.sun.net.httpserver.HttpHandler;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorOutputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
-import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.uima.UIMAException;
-import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.analysis_engine.metadata.SofaMapping;
 import org.apache.uima.cas.*;
-import org.apache.uima.cas.impl.Serialization;
-import org.apache.uima.cas.impl.TypeSystemUtils;
-import org.apache.uima.cas.impl.XCASSerializer;
+import org.apache.uima.cas.impl.*;
 import org.apache.uima.fit.factory.AnalysisEngineFactory;
 import org.apache.uima.fit.factory.JCasFactory;
 import org.apache.uima.fit.factory.TypeSystemDescriptionFactory;
-import org.apache.uima.fit.util.CasUtil;
-import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
-import org.apache.uima.jcas.cas.Sofa;
-import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.metadata.TypeSystemDescription;
 import org.apache.uima.util.*;
+import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.hucompute.reproannotationnlp.ReproducibleAnnotation;
-import org.hucompute.reproannotationnlp.ReproducibleAnnotationHash;
-import org.json.JSONObject;
 import org.xml.sax.SAXException;
 
 import java.io.*;
@@ -40,7 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import com.bubelich.jBaseZ85;
-import java.util.Iterator;
+
 import java.util.zip.CRC32;
 
 
@@ -55,12 +46,14 @@ public class InContainerEngineProcessor implements HttpHandler {
     public SofaMapping[] _mappings;
     public TypeSystem _last_used_typesystem;
     public JCas _runner;
+    public XCASDeserializer _deserializer;
 
     public InContainerEngineProcessor(String configuration) throws UIMAException, IOException {
         try {
-            _runner = JCasFactory.createJCas((TypeSystemDescription) null);
+            _runner = JCasFactory.createJCas();
             _last_used_typesystem = _runner.getTypeSystem();
             _cfg_string = configuration;
+            _deserializer = new XCASDeserializer(_last_used_typesystem);
             _configuration = DockerWrappedEnvironment.from(_cfg_string);
             if(!_configuration.get_compression().equals("")) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -161,28 +154,31 @@ public class InContainerEngineProcessor implements HttpHandler {
         PrintWriter pw = new PrintWriter(sw);
         try {
             if(t.getRequestURI().toString().contains("/set_typesystem")) {
-                _runner.reset();
-                CasIOUtils.load(t.getRequestBody(),null,_runner.getCas(),CasLoadMode.REINIT);
-                JCas new_cas = JCasFactory.createJCas(TypeSystemUtil.typeSystem2TypeSystemDescription(_runner.getTypeSystem()));
+                Path tmpfile = Files.createTempFile("reproanno",".xml");
+                Files.write(tmpfile,org.apache.commons.io.IOUtils.toByteArray(t.getRequestBody()));
+                TypeSystemDescription desc = TypeSystemDescriptionFactory.createTypeSystemDescriptionFromPath(tmpfile.toAbsolutePath().toString());
+                JCas new_cas = JCasFactory.createJCas(desc);
                 _runner = new_cas;
-                t.sendResponseHeaders(200, 0);
+                t.sendResponseHeaders(200,-1);
                 return;
             }
             _runner.reset();
-            CasIOUtils.load(t.getRequestBody(),_runner.getCas());
+            XmiSerializationSharedData sharedData = new XmiSerializationSharedData();
+            XmiCasDeserializer.deserialize(t.getRequestBody(),_runner.getCas(),true,sharedData);
+            Marker a = _runner.getCas().createMarker();
             process(_runner);
 
-            org.apache.commons.io.output.ByteArrayOutputStream out = new org.apache.commons.io.output.ByteArrayOutputStream();
-            CasIOUtils.save(_runner.getCas(),out, SerialFormat.SERIALIZED);
-            t.sendResponseHeaders(200, out.toByteArray().length);
-            OutputStream os = t.getResponseBody();
-            os.write(out.toByteArray());
-            out.close();
-            os.close();
+
+            t.sendResponseHeaders(200, 0);
+            OutputStream response = t.getResponseBody();
+            XmiCasSerializer.serialize(_runner.getCas(), null,response,false,sharedData,a,true);
+            t.getResponseBody().close();
             return;
         } catch (AnalysisEngineProcessException e) {
+            e.printStackTrace();
             e.printStackTrace(pw);
         } catch(Exception e) {
+            e.printStackTrace();
             e.printStackTrace(pw);
         }
         String error = sw.toString();

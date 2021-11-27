@@ -7,10 +7,13 @@ import DockerInterface.base_env.DockerBaseJavaEnv;
 import DockerInterface.base_env.DockerBasePythonGPUEnv;
 import DockerInterface.modules.DockerWrapperModuleSkipAlreadyAnnotated;
 import DockerInterface.util.*;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence;
+import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpNameFinder;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.uima.UIMAException;
+import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.CAS;
@@ -25,12 +28,12 @@ import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.metadata.TypeSystemDescription;
 import org.apache.uima.tools.components.XmiWriterCasConsumer;
 import org.apache.uima.util.InvalidXMLException;
-import org.dkpro.core.corenlp.CoreNlpNamedEntityRecognizer;
-import org.dkpro.core.corenlp.CoreNlpPosTagger;
+import de.tudarmstadt.ukp.dkpro.core.languagetool.LanguageToolLemmatizer;
+import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpPosTagger;
+import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpSegmenter;
 import org.dkpro.core.io.text.TextReader;
-import org.dkpro.core.tokit.BreakIteratorSegmenter;
-import org.dkpro.core.tokit.CamelCaseTokenSegmenter;
 import org.junit.jupiter.api.Test;
+import org.springframework.scheduling.annotation.Async;
 import org.xml.sax.SAXException;
 
 import java.io.*;
@@ -102,7 +105,7 @@ public class DockerWrapperTest {
                 .with_run_in_container(true)
                 .with_container_autoremove(true);
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(AnalysisEngineFactory.createEngineDescription(
-                BreakIteratorSegmenter.class
+                OpenNlpSegmenter.class
         ));
         env.with_pomfile(new File("pom.xml"));
 
@@ -221,10 +224,10 @@ public class DockerWrapperTest {
                         ExampleAnnotator.PARAM_PIPELINE_CONFIGURATION, ""
                 ),
                 AnalysisEngineFactory.createEngineDescription(
-                        BreakIteratorSegmenter.class
+                        OpenNlpSegmenter.class
                 ),
                 AnalysisEngineFactory.createEngineDescription(
-                        CoreNlpPosTagger.class
+                        OpenNlpPosTagger.class
                 )
         );
         env.with_pomfile(new File("pom.xml"));
@@ -311,11 +314,11 @@ public class DockerWrapperTest {
                         ExampleAnnotator.PARAM_PIPELINE_CONFIGURATION, ""
                 ),
                 AnalysisEngineFactory.createEngineDescription(
-                        BreakIteratorSegmenter.class
+                        OpenNlpSegmenter.class
                 ),
                 intoDepth.createAggregateDescription(),
                 AnalysisEngineFactory.createEngineDescription(
-                        CoreNlpPosTagger.class
+                        OpenNlpPosTagger.class
                 ),
                 builder.createAggregateDescription());
         env.with_pomfile(new File("pom.xml"));
@@ -371,11 +374,11 @@ public class DockerWrapperTest {
 
         AggregateBuilder builder = new AggregateBuilder();
         builder.add(AnalysisEngineFactory.createEngineDescription(
-                BreakIteratorSegmenter.class
+                OpenNlpSegmenter.class
         ), CAS.NAME_DEFAULT_SOFA, "second_view");
 
-        builder.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class), CAS.NAME_DEFAULT_SOFA,"second_view");
-        builder.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class), CAS.NAME_DEFAULT_SOFA,"third_view");
+        builder.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class), CAS.NAME_DEFAULT_SOFA,"second_view");
+        builder.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class), CAS.NAME_DEFAULT_SOFA,"third_view");
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration
                 .default_config()
                 .with_run_in_container(false)
@@ -416,10 +419,10 @@ public class DockerWrapperTest {
 
         AggregateBuilder builder = new AggregateBuilder();
         builder.add(AnalysisEngineFactory.createEngineDescription(
-                BreakIteratorSegmenter.class
+                OpenNlpSegmenter.class
         ));
 
-        builder.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
+        builder.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
 
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(builder.createAggregateDescription())
                 .with_reproducible_annotation_target_view("view_2")
@@ -486,11 +489,6 @@ public class DockerWrapperTest {
             i.with_sofa_mapping(CAS.NAME_DEFAULT_SOFA,"view_2");
 
             for(AnnotatorDescription d : i.get_recursive_descriptions()) {
-                if(d.get_name().equals(BreakIteratorSegmenter.class.getName())) {
-                    AnnotatorParameterWrapper p = d.get_parameter(BreakIteratorSegmenter.PARAM_SPLIT_AT_APOSTROPHE);
-                    p.debug_print();
-                    p.set_value(true);
-                }
                 System.out.printf("Found annotator %s\n",d.get_name());
             }
 
@@ -528,10 +526,10 @@ public class DockerWrapperTest {
 
         AggregateBuilder builder = new AggregateBuilder();
         builder.add(AnalysisEngineFactory.createEngineDescription(
-                BreakIteratorSegmenter.class
+                OpenNlpSegmenter.class
         ));
 
-        builder.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
+        builder.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(builder.createAggregateDescription());
         env.with_pomfile(new File("pom.xml"));
 
@@ -545,17 +543,15 @@ public class DockerWrapperTest {
     @Test
     void EvaluationGermanPolit() throws Exception {
         //This runs the specified engine not in an container but in the host system
-
-
         AggregateBuilder builder = new AggregateBuilder();
         builder.add(AnalysisEngineFactory.createEngineDescription(
-                BreakIteratorSegmenter.class
+                OpenNlpSegmenter.class
         ));
 
 
-        builder.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
+        builder.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
 
-        builder.add(AnalysisEngineFactory.createEngineDescription(CamelCaseTokenSegmenter.class));
+        builder.add(AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class));
         CollectionReaderDescription rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
                 TextReader.PARAM_SOURCE_LOCATION, "/home/alexander/Documents/BachelorThesis/corpora/German-political-speeches-2019-release/output",
                 TextReader.PARAM_PATTERNS, "[+]**/*.txt",
@@ -580,41 +576,41 @@ public class DockerWrapperTest {
             AnalysisEngineDescription desc = null;
             if(i%4==0) {
                 desc = AnalysisEngineFactory.createEngineDescription(AnalysisEngineFactory.createEngineDescription(
-                        BreakIteratorSegmenter.class
+                        OpenNlpSegmenter.class
                 ));
             }
             else if(i%4==1) {
                 AggregateBuilder builder2 = new AggregateBuilder();
                 builder2.add(AnalysisEngineFactory.createEngineDescription(
-                        BreakIteratorSegmenter.class
+                        OpenNlpSegmenter.class
                 ));
 
 
-                builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
+                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
 
                 desc = builder2.createAggregateDescription();
             }
             else if (i%4==2) {
                 AggregateBuilder builder2 = new AggregateBuilder();
                 builder2.add(AnalysisEngineFactory.createEngineDescription(
-                        BreakIteratorSegmenter.class
+                        OpenNlpSegmenter.class
                 ));
 
 
-                builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
-                builder2.add(AnalysisEngineFactory.createEngineDescription(CamelCaseTokenSegmenter.class));
+                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
+                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class));
                 desc = builder2.createAggregateDescription();
             }
             else if(i%4==3) {
                 AggregateBuilder builder2 = new AggregateBuilder();
                 builder2.add(AnalysisEngineFactory.createEngineDescription(
-                        BreakIteratorSegmenter.class
+                        OpenNlpSegmenter.class
                 ));
 
 
-                builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
-                builder2.add(AnalysisEngineFactory.createEngineDescription(CamelCaseTokenSegmenter.class));
-                builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpNamedEntityRecognizer.class));
+                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
+                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class));
+                builder2.add(AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class));
                 desc = builder2.createAggregateDescription();
             }
 
@@ -826,20 +822,21 @@ public class DockerWrapperTest {
     @Test
     void check_same_size() throws IOException, ResourceInitializationException, SAXException, InvalidXMLException {
         AnalysisEngineDescription base = AnalysisEngineFactory.createEngineDescription(AnalysisEngineFactory.createEngineDescription(
-                BreakIteratorSegmenter.class
+                OpenNlpSegmenter.class
         ));
-        DockerWrappedEnvironment env = DockerWrappedEnvironment.from(base);
+        DockerWrappedEnvironment env = DockerWrappedEnvironment.from(base,AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
         env.with_pomfile(new File("pom.xml"));
         env.with_compression(CompressorStreamFactory.XZ);
 
         AnalysisEngineDescription cont = env.build(DockerWrapperContainerConfiguration.default_config()
-                .with_run_in_container(true)
-                .with_confirm_integrity(false)
+                .with_run_in_container(false)
+                .with_confirm_integrity(true)
                 .with_container_autoremove(true));
+
 
         AnalysisEngineDescription no_cont = env.build(DockerWrapperContainerConfiguration.default_config()
                 .with_run_in_container(false)
-                .with_confirm_integrity(false)
+                .with_confirm_integrity(true)
                 .with_container_autoremove(true));
         CollectionReaderDescription rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
                 TextReader.PARAM_SOURCE_LOCATION, "/home/alexander/Documents/BachelorThesis/corpora/extract_wikipedia_sample/output",
@@ -852,6 +849,7 @@ public class DockerWrapperTest {
         while (iterator.hasNext() && iter2.hasNext()) {
             JCas jc = iterator.next();
             JCas jc2 = iter2.next();
+            System.out.println("Size: "+JCasUtil.selectAll(jc).size());
             String st1 = DockerWrapperUtil.cas_to_xmi(jc).replaceAll("timestamp=\"[0-9]+\"","");
             String st2 = DockerWrapperUtil.cas_to_xmi(jc2).replaceAll("timestamp=\"[0-9]+\"","");
             if (!st1.equals(st2)) {
@@ -863,31 +861,70 @@ public class DockerWrapperTest {
     }
 
     @Test
-    void simplest_usage_example() throws UIMAException, IOException, SAXException, CompressorException {
+    void simplest_usage_example() throws UIMAException, IOException, SAXException, CompressorException, InterruptedException {
+        CollectionReaderDescription rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
+                TextReader.PARAM_SOURCE_LOCATION, "/home/alexander/Documents/BachelorThesis/corpora/extract_wikipedia_sample/output",
+                TextReader.PARAM_PATTERNS, "[+]**/*.txt",
+                TextReader.PARAM_LANGUAGE, "de");
+
+        DockerWrappedEnvironment env = DockerWrappedEnvironment.from(AnalysisEngineFactory.createEngineDescription(ExampleAnnotator.class));
+        env.with_pomfile(new File("pom.xml"));
+        env.with_compression(CompressorStreamFactory.XZ);
+
+        AnalysisEngineDescription cont = env.build(DockerWrapperContainerConfiguration.default_config()
+                .with_run_in_container(true)
+                .with_confirm_integrity(false)
+                .with_scaleout(4)
+                .with_container_autoremove(true));
+
+        AsyncPipeline n = new AsyncPipeline(rd,cont);
+        Thread.sleep(2000);
+        n.run();
+    }
+
+    @Test
+    void performance_comparision() throws UIMAException, IOException, SAXException, CompressorException, InterruptedException {
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration.default_config()
-                .with_run_in_container(false);
+                .with_run_in_container(true)
+                .with_scaleout(4)
+                .with_container_initialise_timeout(50)
+                .with_container_autoremove(true);
+
+        DockerWrapperContainerConfiguration cfg_no_cont = DockerWrapperContainerConfiguration.default_config()
+                .with_run_in_container(false)
+                .with_container_initialise_timeout(50);
 
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(
-                AnalysisEngineFactory.createEngineDescription(BreakIteratorSegmenter.class),
-                AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class)
-        ).with_name("experiment_1");
+                AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
+                AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class),
+                AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class),
+                AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class)
+        ).with_name("experiment_1").with_pomfile(new File("pom.xml"));
 
         DockerWrappedEnvironment env2 = DockerWrappedEnvironment.from(
-                AnalysisEngineFactory.createEngineDescription(BreakIteratorSegmenter.class, BreakIteratorSegmenter.PARAM_SPLIT_AT_APOSTROPHE, true),
-                AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class)
-        ).with_name("experiment_2").with_reproducible_annotation_target_view("second_view")
-                .with_sofa_mapping(CAS.NAME_DEFAULT_SOFA,"second_view");
+                        AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
+                        AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class),
+                        AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class),
+                        AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class)
+                ).with_name("experiment_2");
 
+        CollectionReaderDescription rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
+                TextReader.PARAM_SOURCE_LOCATION, "/home/alexander/Documents/BachelorThesis/corpora/extract_wikipedia_sample/output",
+                TextReader.PARAM_PATTERNS, "[+]**/*.txt",
+                TextReader.PARAM_LANGUAGE, "en"
+        );
+        AnalysisEngine eng2 = AnalysisEngineFactory.createEngine(env2.build(cfg_no_cont));
 
-        JCas view_cas = JCasFactory.createJCas();
-        view_cas.setDocumentText("This is the first simple example.");
-        view_cas.setDocumentLanguage("en");
+        AsyncPipeline pipe = new AsyncPipeline(rd,env.build(cfg));
+        long time_1 = System.currentTimeMillis();
+        pipe.run();
+        long runtime1 = System.currentTimeMillis()-time_1;
 
-        JCas view_cas_sec = view_cas.createView("second_view");
-        view_cas_sec.setDocumentText("This is the first simple example.");
-        view_cas_sec.setDocumentLanguage("en");
-        SimplePipeline.runPipeline(view_cas,env.build(cfg));
-        SimplePipeline.runPipeline(view_cas,env2.build(cfg));
+        time_1 = System.currentTimeMillis();
+        SimplePipeline.runPipeline(CollectionReaderFactory.createReader(rd),eng2);
+        long runtime2 = System.currentTimeMillis()-time_1;
+        System.out.printf("Experiment 1 took %dms\n",runtime1);
+        System.out.printf("Experiment 2 took %dms\n",runtime2);
     }
 
     @Test
@@ -897,16 +934,16 @@ public class DockerWrapperTest {
 
 //Give the environment a name to later select by name
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(
-                AnalysisEngineFactory.createEngineDescription(BreakIteratorSegmenter.class),
-                AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class)
+                AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
+                AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class)
         ).with_name("experiment_1");
 
 //Give the second environment also a name and redirect any changes to the
 //default SoFa to the "second_view". Also write the reproducible annotation
 //generated by the environment into "third_view".
         DockerWrappedEnvironment env2 = DockerWrappedEnvironment.from(
-                        AnalysisEngineFactory.createEngineDescription(BreakIteratorSegmenter.class, BreakIteratorSegmenter.PARAM_SPLIT_AT_APOSTROPHE, true),
-                        AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class)
+                        AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
+                        AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class)
                 ).with_name("experiment_2").with_reproducible_annotation_target_view("third_view")
                 .with_sofa_mapping(CAS.NAME_DEFAULT_SOFA,"second_view");
 

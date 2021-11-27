@@ -8,7 +8,6 @@ import DockerInterface.modules.DockerWrapperModuleErrorImplementation;
 import DockerInterface.modules.IDockerWrapperModule;
 import DockerInterface.remote.InContainerEngineProcessor;
 import DockerInterface.util.DockerWrapperUtil;
-import de.tudarmstadt.ukp.dkpro.core.api.metadata.type.DocumentMetaData;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -21,18 +20,18 @@ import org.apache.uima.UIMAException;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.*;
 import org.apache.uima.analysis_engine.metadata.SofaMapping;
-import org.apache.uima.cas.CAS;
-import org.apache.uima.cas.CASException;
-import org.apache.uima.cas.SerialFormat;
+import org.apache.uima.cas.*;
 import org.apache.uima.cas.admin.CASMgr;
-import org.apache.uima.cas.impl.XCASSerializer;
+import org.apache.uima.cas.impl.*;
 import org.apache.uima.fit.component.JCasAnnotator_ImplBase;
 import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.factory.AggregateBuilder;
 import org.apache.uima.fit.factory.JCasFactory;
+import org.apache.uima.fit.factory.TypeSystemDescriptionFactory;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
+import org.apache.uima.resource.metadata.TypeSystemDescription;
 import org.apache.uima.util.*;
 import org.hucompute.reproannotationnlp.ReproducibleAnnotationHash;
 import org.json.JSONObject;
@@ -45,9 +44,22 @@ import java.security.InvalidParameterException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.stream.Collectors;
 
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
+
+
+class ContainerInfo {
+    public String _endpoint;
+    public String _containerid;
+
+    public ContainerInfo(String endpoint, String containerid) {
+        _endpoint = endpoint;
+        _containerid = containerid;
+    }
+}
+
 
 /**
  * The basic implementation of the DockerWrapper for the UIMA AnalysisEngineDescription, this annotator builds on request
@@ -139,6 +151,11 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
 
     public static final String VIEW_NAME_CONFIRM_INTEGRITY = "_view_texttechnologylab_cas_integrity";
 
+    public static final String PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS = "TEXTTECHNOLOGYLAB_ASYNC_SCALEOUT_SIZE";
+    @ConfigurationParameter(name=PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, mandatory = true, defaultValue = "1")
+    private int _async_scalout;
+
+    private long _dockerport;
     /**
      * Uses the existing docker container and binds the container to the DockerWrapper
      * @param container_config The configuration of the container which only needs to set the export name, the container id and the module configurations
@@ -235,63 +252,63 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
         super.initialize(aContext);
 
         try {
+            JCas jc = JCasFactory.createJCas();
             _modules = _additional_modules.stream().map(DockerWrapper::string_to_module).collect(Collectors.toList());
             for(int i = 0; i < _modules.size(); i++) {
                 _modules.get(i).onInitialize(aContext,_additional_modules_config.get(i));
             }
-            if(!_container_unsafe_id.equals("")) {
-                _docker_interface = new DockerGeneralInterface();
-                _containerid = _container_unsafe_id;
-                int dockerport = _docker_interface.extract_port_mapping(_container_unsafe_id);
-                _containerurl = "http://127.0.0.1:"+String.valueOf(dockerport)+"/process";
-                return;
-            }
+
             _configuration = DockerWrappedEnvironment.from(_cfg_string);
-
             if(_run_in_container) {
-                Path tempdir = Files.createTempDirectory("reproanno");
-                System.out.printf("Tempdir %s\n",tempdir.toString());
-                Files.write(Paths.get(tempdir.toString(),"dockerfile"),_configuration.get_dockerfile().getBytes(StandardCharsets.UTF_8));
-                Files.write(Paths.get(tempdir.toString(),"pom.xml"),_configuration.get_pomfile().getBytes(StandardCharsets.UTF_8));
-                Files.write(Paths.get(tempdir.toString(),"cfg"),_cfg_string.getBytes(StandardCharsets.UTF_8));
-                _docker_interface = new DockerGeneralInterface();
-                _containerid = _docker_interface.build_and_run(tempdir,_use_gpu,_autoremove,_reuse_container,_container_name
-                ,_unsafe_map_daemon);
-                System.out.printf("Container id: %s\n",_containerid);
-                int dockerport = _docker_interface.extract_port_mapping(_containerid);
-                _containerurl = String.format("http://%s:%s/process",_docker_interface.get_ip(),String.valueOf(dockerport));
-
-                System.out.printf("Container url: %s\n",_containerurl);
-                long seconds = 0;
-                while(!_docker_interface.get_logs(_containerid).contains("Server started on port 9714")) {
-                    Thread.sleep(1000);
-                    seconds+=1;
-                    if(seconds>=_container_initialise_timeout) {
-                        throw new ResourceInitializationException();
-                    }
+                if(!_container_unsafe_id.equals("")) {
+                    _docker_interface = new DockerGeneralInterface();
+                    _containerid = _container_unsafe_id;
+                    _dockerport = _docker_interface.extract_port_mapping(_container_unsafe_id);
+                    _containerurl = "http://127.0.0.1:"+String.valueOf(_dockerport)+"/process";
+                    return;
                 }
-                System.out.println("Container up and running!");
-                System.out.println("Setting typesystem now!");
-                {
-                    HttpClient httpclient = HttpClients.createDefault();
-                    HttpPost httppost = new HttpPost(String.format("http://%s:%s/set_typesystem",_docker_interface.get_ip(),String.valueOf(dockerport)));
-                    ByteArrayOutputStream arr = new ByteArrayOutputStream();
-                    JCas aJCas = JCasFactory.createJCas();
-                    CasIOUtils.save(aJCas.getCas(),arr, SerialFormat.COMPRESSED_TSI);
-                    HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.DEFAULT_BINARY);
-                    httppost.setEntity(entity);
+                else {
+                    Path tempdir = Files.createTempDirectory("reproanno");
+                    System.out.printf("Tempdir %s\n", tempdir.toString());
+                    _configuration.writeRessourceToDirectory(tempdir.toFile());
+                    Files.write(Paths.get(tempdir.toString(), "cfg"), _cfg_string.getBytes(StandardCharsets.UTF_8));
+                    _docker_interface = new DockerGeneralInterface();
 
-
-                    HttpResponse httpresp = httpclient.execute(httppost);
-                    HttpEntity respentity = httpresp.getEntity();
-
-                    if(httpresp.getStatusLine().getStatusCode() != 200) {
-                        System.err.println("Could not set container typesystem!");
-                        throw new ResourceInitializationException();
+                    String image_id = _docker_interface.build(tempdir);
+                    if(_async_scalout==1) {
+                        _containerid = _docker_interface.run(image_id, _use_gpu, _autoremove, _reuse_container, _container_name
+                                , _unsafe_map_daemon);
+                        System.out.printf("Container id: %s\n", _containerid);
+                        _dockerport = _docker_interface.extract_port_mapping(_containerid);
+                        _containerurl = String.format("http://%s:%s/process", _docker_interface.get_ip(), String.valueOf(_dockerport));
+                        System.out.printf("Container url: %s\n", _containerurl);
+                        System.out.println("Waiting on container startup!");
+                        long seconds = 0;
+                        String log = "";
+                        while (!(log += _docker_interface.get_logs(_containerid)).contains("Server started on port 9714")) {
+                            Thread.sleep(1000);
+                            seconds += 1;
+                            if (seconds >= _container_initialise_timeout) {
+                                System.err.println(log);
+                                throw new ResourceInitializationException();
+                            }
+                        }
+                        System.out.println("Container up and running!");
                     }
+                    else {
+                        String service_id = _docker_interface.run_service(image_id,_async_scalout);
+                        _dockerport = _docker_interface.extract_service_port_mapping(service_id);
+                        _containerurl = String.format("http://%s:%s/process", _docker_interface.get_ip(), String.valueOf(_dockerport));
+                        System.out.printf("Service url: %s\n", _containerurl);
+                        System.out.println("Service is up and running.");
+                    }
+                    Thread.sleep(3000);
                 }
             }
             else {
+                if(_async_scalout!=1) {
+                    throw new IllegalArgumentException("Can not create a scaleout analysis engine if it does not run in a container!");
+                }
                 _processor = new InContainerEngineProcessor(_cfg_string);
             }
         } catch (InvalidXMLException e) {
@@ -346,6 +363,36 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
         }
     }
 
+    public void updateContainerTypesystem(TypeSystem ts, boolean warmup) throws IOException, SAXException, ResourceInitializationException {
+        if(warmup) {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                throw new ResourceInitializationException();
+            }
+        }
+        HttpClient httpclient = HttpClients.createDefault();
+        HttpPost httppost = new HttpPost(String.format("http://%s:%s/set_typesystem",_docker_interface.get_ip(),String.valueOf(_dockerport)));
+        ByteArrayOutputStream arr = new ByteArrayOutputStream();
+        TypeSystemDescription desc = TypeSystemDescriptionFactory.createTypeSystemDescription();
+        desc.toXML(arr);
+        HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.DEFAULT_BINARY);
+        httppost.setEntity(entity);
+
+        HttpResponse httpresp = httpclient.execute(httppost);
+        HttpEntity respentity = httpresp.getEntity();
+
+        if(httpresp.getStatusLine().getStatusCode() != 200) {
+            System.err.println("Could not set container typesystem!");
+            throw new ResourceInitializationException();
+        }
+        if(respentity!=null) {
+            byte[] buffer = new byte[1024];
+            for (int length; (length = respentity.getContent().read(buffer)) != -1; ) {
+            }
+        }
+    }
+
     /**
      * Processes the given CAS document by sending it either to the container or by running the embedded analysis engine
      * otherwise. Also runs the modules and skips the CAS document if one of them returns false. Runs also the integrity checks
@@ -387,15 +434,14 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
         }
 
         if(_run_in_container) {
-            System.out.printf("RUN in container with sofa length %s\n",aJCas.getDocumentText().length());
-            JSONObject js = new JSONObject();
-            StringWriter typesystem = new StringWriter();
             try {
                 HttpClient httpclient = HttpClients.createDefault();
                 HttpPost httppost = new HttpPost(_containerurl);
                 ByteArrayOutputStream arr = new ByteArrayOutputStream();
-                CasIOUtils.save(aJCas.getCas(),arr, SerialFormat.SERIALIZED);
-                HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.DEFAULT_BINARY);
+                XmiSerializationSharedData sharedData = new XmiSerializationSharedData();
+                XmiCasSerializer.serialize(aJCas.getCas(),null,arr,false,sharedData,null,true);
+
+                HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
                 httppost.setEntity(entity);
 
 
@@ -414,16 +460,18 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                     throw new AnalysisEngineProcessException();
                 }
                 if (respentity != null) {
-                    InputStream instream = respentity.getContent();
-                    byte []kk = IOUtils.toByteArray(instream);
-                    CasIOUtils.load(new ByteArrayInputStream(kk),null,aJCas.getCas(),CasLoadMode.DEFAULT);
+                    XmiCasDeserializer.deserialize(respentity.getContent(), aJCas.getCas(), false, sharedData, sharedData.getMaxXmiId(),
+                            AllowPreexistingFS.allow);
                 }
                 else {
                     throw new AnalysisEngineProcessException();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
-                throw new AnalysisEngineProcessException();
+                throw new AnalysisEngineProcessException(e);
+            } catch (SAXException e) {
+                e.printStackTrace();
+                throw new AnalysisEngineProcessException(e);
             }
         }
         else {
@@ -457,9 +505,13 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
     @Override
     public void destroy() {
         if(_run_in_container) {
-            _docker_interface.export_to_new_image(_containerid,_export_name);
+            if(_async_scalout==1) {
+                _docker_interface.export_to_new_image(_containerid, _export_name);
+            }
             if(_container_unsafe_id.equals("")) {
-                _docker_interface.stop_container(_containerid);
+                if(_async_scalout==1) {
+                    _docker_interface.stop_container(_containerid);
+                }
             }
             try {
                 _docker_interface._docker.close();

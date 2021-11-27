@@ -1,12 +1,9 @@
 
-/* First created by JCasGen Wed Nov 24 13:14:00 CET 2021 */
+/* First created by JCasGen Sat Nov 27 19:07:12 CET 2021 */
 package org.hucompute.reproannotationnlp;
 
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.JCasRegistry;
-import org.apache.uima.cas.impl.CASImpl;
-import org.apache.uima.cas.impl.FSGenerator;
-import org.apache.uima.cas.FeatureStructure;
 import org.apache.uima.cas.impl.TypeImpl;
 import org.apache.uima.cas.Type;
 import org.apache.uima.cas.impl.FeatureImpl;
@@ -14,30 +11,9 @@ import org.apache.uima.cas.Feature;
 import org.apache.uima.jcas.tcas.Annotation_Type;
 
 /** An docker and engine anntation for an annotator
- * Updated by JCasGen Wed Nov 24 13:14:00 CET 2021
+ * Updated by JCasGen Sat Nov 27 19:07:12 CET 2021
  * @generated */
 public class ReproducibleAnnotation_Type extends Annotation_Type {
-  /** @generated 
-   * @return the generator for this type
-   */
-  @Override
-  protected FSGenerator getFSGenerator() {return fsGenerator;}
-  /** @generated */
-  private final FSGenerator fsGenerator = 
-    new FSGenerator() {
-      public FeatureStructure createFS(int addr, CASImpl cas) {
-  			 if (ReproducibleAnnotation_Type.this.useExistingInstance) {
-  			   // Return eq fs instance if already created
-  		     FeatureStructure fs = ReproducibleAnnotation_Type.this.jcas.getJfsFromCaddr(addr);
-  		     if (null == fs) {
-  		       fs = new ReproducibleAnnotation(addr, ReproducibleAnnotation_Type.this);
-  			   ReproducibleAnnotation_Type.this.jcas.putJfsFromCaddr(addr, fs);
-  			   return fs;
-  		     }
-  		     return fs;
-        } else return new ReproducibleAnnotation(addr, ReproducibleAnnotation_Type.this);
-  	  }
-    };
   /** @generated */
   @SuppressWarnings ("hiding")
   public final static int typeIndexID = ReproducibleAnnotation.typeIndexID;
