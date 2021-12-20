@@ -5,6 +5,7 @@ import DockerInterface.DockerWrapper;
 import DockerInterface.DockerWrapperContainerConfiguration;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
+import org.apache.uima.analysis_engine.metadata.SofaMapping;
 import org.apache.uima.cas.CASException;
 import org.apache.uima.cas.impl.XCASSerializer;
 import org.apache.uima.collection.CasConsumerDescription;
@@ -17,10 +18,15 @@ import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.ResourceSpecifier;
 import org.apache.uima.resource.metadata.ConfigurationParameter;
 import org.apache.uima.resource.metadata.NameValuePair;
+import org.apache.uima.resource.metadata.TypeDescription;
+import org.apache.uima.resource.metadata.TypeSystemDescription;
 import org.apache.uima.util.InvalidXMLException;
+import org.apache.uima.util.TypeSystemUtil;
 import org.apache.uima.util.XMLSerializer;
 import org.hucompute.reproannotationnlp.ReproducibleAnnotation;
 import org.hucompute.reproannotationnlp.ReproducibleAnnotationHash;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.xml.sax.SAXException;
 
 import java.io.*;
@@ -59,6 +65,184 @@ public class DockerWrapperUtil {
             }
         }
     }
+
+    static public void add_param_to_json(AnnotatorParameterWrapper param, JSONObject add) {
+        switch (param.get_type()) {
+            case ConfigurationParameter.TYPE_FLOAT:
+                if (param.get_multivalued()) {
+                    add.put("value",(Float[]) param.get_value());
+                } else {
+                    add.put("value",(Float) param.get_value());
+                }
+                break;
+            case ConfigurationParameter.TYPE_STRING:
+                if (param.get_multivalued()) {
+                    add.put("value",(String[]) param.get_value());
+                } else {
+                    add.put("value",(String) param.get_value());
+                }
+                break;
+            case ConfigurationParameter.TYPE_BOOLEAN:
+                if (param.get_multivalued()) {
+                    add.put("value",(Boolean[]) param.get_value());
+                } else {
+                    add.put("value",(Boolean) param.get_value());
+                }
+                break;
+            case ConfigurationParameter.TYPE_INTEGER:
+                if (param.get_multivalued()) {
+                    add.put("value",(Integer[]) param.get_value());
+                } else {
+                    add.put("value",(Integer) param.get_value());
+                }
+                break;
+        }
+    }
+
+    static public void add_param_to_json(Object value, JSONObject add) {
+        if(value instanceof Integer) {
+            add.put("value",(Integer)value);
+        }
+        else if(value instanceof Integer[]) {
+            add.put("value",(Integer[])value);
+        }
+        else if(value instanceof Boolean) {
+            add.put("value",(Boolean) value);
+        }
+        else if(value instanceof Boolean[]) {
+            add.put("value",(Boolean[]) value);
+        }
+        else if(value instanceof String) {
+            add.put("value",(String)value);
+        }
+        else if(value instanceof String[]) {
+            add.put("value",(String[])value);
+        }
+        else if(value instanceof Float) {
+            add.put("value",(Float) value);
+        }
+        else if(value instanceof Float[]) {
+            add.put("value",(Float[]) value);
+        }
+    }
+
+    static private JSONObject add_all_subtypes(String root, List<TypeDescription> tocheck, Map<String,List<TypeDescription>> supertypes, TypeSystemDescription desc) {
+        JSONObject obj = new JSONObject();
+        JSONArray children = new JSONArray();
+        if(tocheck!=null) {
+            for (TypeDescription d : tocheck) {
+                children.put(add_all_subtypes(d.getName(), supertypes.get(d.getName()), supertypes,desc));
+            }
+        }
+        TypeDescription rootType = desc.getType(root);
+        if(rootType!=null) {
+            obj.put("name", rootType.getName());
+            obj.put("description", rootType.getDescription());
+        }
+        else {
+            obj.put("name",root);
+        }
+        obj.put("children", children);
+        return obj;
+    }
+
+    static public JSONObject typesystemToJSON(TypeSystemDescription desc) {
+        Map<String,List<TypeDescription>> types = new HashMap<>();
+        Set<String> rootTypes= new HashSet<>();
+        for(TypeDescription type : desc.getTypes()) {
+            if(types.containsKey(type.getSupertypeName())) {
+                types.get(type.getSupertypeName()).add(type);
+            }
+            else {
+                List<TypeDescription> lst = new LinkedList<>();
+                lst.add(type);
+                types.put(type.getSupertypeName(),lst);
+            }
+        }
+
+        for(Map.Entry<String,List<TypeDescription>> entry : types.entrySet()) {
+            String rootName = entry.getKey();
+            TypeDescription t = desc.getType(rootName);
+            if(t==null) {
+                //rootName must be supertype
+                rootTypes.add(rootName);
+            }
+            else {
+                while(t!=null) {
+                    rootName = t.getSupertypeName();
+                    t = desc.getType(t.getSupertypeName());
+                }
+                rootTypes.add(rootName);
+            }
+        }
+
+        JSONObject ts = new JSONObject();
+        JSONArray arr = new JSONArray();
+        for(String root : rootTypes) {
+            arr.put(DockerWrapperUtil.add_all_subtypes(root,types.get(root),types,desc));
+        }
+        ts.put("typesystem",arr);
+        return ts;
+    }
+
+    static public JSONObject analysisEngineDescriptionToJson(AnalysisEngineDescription engine) throws InvalidXMLException {
+        JSONObject obj = new JSONObject();
+        if(engine.isPrimitive()) {
+            JSONObject annotator = new JSONObject();
+            JSONArray parameters = new JSONArray();
+            AnnotatorDescription wrapper = new AnnotatorDescription(engine);
+            for(AnnotatorParameterWrapper wrp : wrapper.get_parameters()) {
+                JSONObject param = new JSONObject();
+                param.put("name",wrp.get_name());
+                param.put("description",wrp.get_description());
+                param.put("type",wrp.get_type());
+                param.put("mandatory",wrp.get_mandatory());
+                param.put("multivalued",wrp.get_multivalued());
+                add_param_to_json(wrp,param);
+                parameters.put(param);
+            }
+            annotator.put("parameters",parameters);
+            annotator.put("name",wrapper.get_name());
+
+            JSONArray unlisted_params = new JSONArray();
+            for(String wrp : wrapper.get_unlisted_parameters()) {
+                JSONObject param = new JSONObject();
+                param.put("name",wrp);
+                add_param_to_json(wrapper.get_unlisted_parameter(wrp),param);
+                unlisted_params.put(param);
+            }
+            annotator.put("unlisted_parameters",unlisted_params);
+            obj.put("annotator",annotator);
+        }
+        else {
+            SofaMapping[] mappings = engine.getSofaMappings();
+            JSONArray analysis_engines = new JSONArray();
+            Map<String, ResourceSpecifier> spec = engine.getDelegateAnalysisEngineSpecifiers();
+            for(String x : spec.keySet()) {
+                ResourceSpecifier res = spec.get(x);
+                if (res instanceof AnalysisEngineDescription) {
+                    JSONObject result = analysisEngineDescriptionToJson((AnalysisEngineDescription) res);
+                    JSONArray sofa_mappings = new JSONArray();
+                    if(mappings!=null) {
+                        for (SofaMapping mapping : mappings) {
+                            if(mapping.getComponentKey().equals(x)) {
+                                JSONObject sf = new JSONObject();
+                                sf.put("component_sofa",mapping.getComponentSofaName());
+                                sf.put("aggregate_sofa",mapping.getAggregateSofaName());
+                                sofa_mappings.put(sf);
+                            }
+                        }
+                    }
+                    result.put("sofa_mappings",sofa_mappings);
+                    analysis_engines.put(result);
+                }
+            }
+            obj.put("engines",analysis_engines);
+            obj.put("sofa_mappings",new LinkedList<JSONObject>());
+        }
+        return obj;
+    }
+
     static private String[] extractNames(AnalysisEngineDescription engine, int recursionDepth) throws InvalidXMLException {
         List<String> lst = new ArrayList<String>();
         String offset = "";
@@ -243,7 +427,7 @@ public class DockerWrapperUtil {
     public static String cas_to_xmi(JCas jcas) throws IOException, SAXException {
         org.apache.commons.io.output.ByteArrayOutputStream out = new org.apache.commons.io.output.ByteArrayOutputStream();
         XCASSerializer ser = new XCASSerializer(jcas.getTypeSystem());
-        XMLSerializer xmlSer = new XMLSerializer(out, false);
+        XMLSerializer xmlSer = new XMLSerializer(out, true);
         ser.serialize(jcas.getCas(), xmlSer.getContentHandler());
         String result = new String(out.toByteArray(), "UTF-8");
         out.close();

@@ -25,6 +25,7 @@ public class ExampleAnnotator extends JCasAnnotator_ImplBase {
     @Override
     public void initialize(UimaContext aContext) throws ResourceInitializationException {
         super.initialize(aContext);
+        System.out.println("Initialising annotator!");
     }
 
     public String get_pipeline_prefix() {

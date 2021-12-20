@@ -99,6 +99,15 @@
         </dependency>
 
 
+        <!-- https://mvnrepository.com/artifact/org.rapidoid/rapidoid-http-fast -->
+        <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents.client5/httpclient5 -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.1.2</version>
+        </dependency>
+
+
         <!-- https://mvnrepository.com/artifact/de.tudarmstadt.ukp.dkpro.core/de.tudarmstadt.ukp.dkpro.core.opennlp-model-tagger-en-maxent -->
         <dependency>
             <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>

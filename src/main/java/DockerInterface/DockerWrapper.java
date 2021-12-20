@@ -2,20 +2,35 @@ package DockerInterface;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 
 import DockerInterface.modules.DockerWrapperModuleErrorImplementation;
 import DockerInterface.modules.IDockerWrapperModule;
 import DockerInterface.remote.InContainerEngineProcessor;
 import DockerInterface.util.DockerWrapperUtil;
+import DockerInterface.util.InputOutputBuffer;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.BasicHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.io.HttpClientConnectionManager;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.io.SocketConfig;
+import org.apache.hc.core5.http.io.entity.InputStreamEntity;
+import org.apache.hc.core5.pool.PoolConcurrencyPolicy;
+import org.apache.hc.core5.pool.PoolReusePolicy;
+import org.apache.hc.core5.util.TimeValue;
+import org.apache.hc.core5.util.Timeout;
 import org.apache.uima.UIMAException;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.*;
@@ -26,6 +41,7 @@ import org.apache.uima.cas.impl.*;
 import org.apache.uima.fit.component.JCasAnnotator_ImplBase;
 import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.factory.AggregateBuilder;
+import org.apache.uima.fit.factory.AnalysisEngineFactory;
 import org.apache.uima.fit.factory.JCasFactory;
 import org.apache.uima.fit.factory.TypeSystemDescriptionFactory;
 import org.apache.uima.fit.util.JCasUtil;
@@ -45,18 +61,19 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
 
 
-class ContainerInfo {
-    public String _endpoint;
-    public String _containerid;
+class ConnectionHelper {
+    public Socket connection;
+    public InputOutputBuffer buffer;
 
-    public ContainerInfo(String endpoint, String containerid) {
-        _endpoint = endpoint;
-        _containerid = containerid;
+    public ConnectionHelper(Socket endpoint, InputOutputBuffer buff) {
+        connection = endpoint;
+        buffer = buff;
     }
 }
 
@@ -155,7 +172,16 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
     @ConfigurationParameter(name=PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, mandatory = true, defaultValue = "1")
     private int _async_scalout;
 
+    public static final String PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE = "TEXTTECHNOLOGYLAB_ASYNC_SCALEOUT_TYPE";
+    @ConfigurationParameter(name=PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE, mandatory = false, defaultValue = "SHARED_ANNOTATOR")
+    private String _async_scaleout_desc;
+    private ScaleoutType _async_scaleout_type;
+
     private long _dockerport;
+
+    PoolingHttpClientConnectionManager _poolingConnManager;
+
+    private TypeSystem _engine_typesystem;
     /**
      * Uses the existing docker container and binds the container to the DockerWrapper
      * @param container_config The configuration of the container which only needs to set the export name, the container id and the module configurations
@@ -252,14 +278,33 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
         super.initialize(aContext);
 
         try {
-            JCas jc = JCasFactory.createJCas();
+            if(_async_scaleout_desc==null) {
+                _async_scaleout_type = ScaleoutType.SHARED_ANNOTATOR;
+            }
+            else {
+                _async_scaleout_type = ScaleoutType.valueOf(_async_scaleout_desc);
+            }
+
             _modules = _additional_modules.stream().map(DockerWrapper::string_to_module).collect(Collectors.toList());
             for(int i = 0; i < _modules.size(); i++) {
                 _modules.get(i).onInitialize(aContext,_additional_modules_config.get(i));
             }
 
             _configuration = DockerWrappedEnvironment.from(_cfg_string);
+
+            _engine_typesystem = JCasFactory.createJCas(CasCreationUtils.mergeDelegateAnalysisEngineTypeSystems(_configuration.get_engine_description())).getTypeSystem();
             if(_run_in_container) {
+                _poolingConnManager = PoolingHttpClientConnectionManagerBuilder.create()
+                        .setDefaultSocketConfig(SocketConfig.custom()
+                                .setSoTimeout(Timeout.ofSeconds(25))
+                                .build())
+                        .setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
+                        .setConnPoolPolicy(PoolReusePolicy.LIFO)
+                        .setConnectionTimeToLive(TimeValue.ofMinutes(1L))
+                        .setMaxConnPerRoute(_async_scalout)
+                        .setMaxConnTotal(_async_scalout*2)
+                        .build();
+
                 if(!_container_unsafe_id.equals("")) {
                     _docker_interface = new DockerGeneralInterface();
                     _containerid = _container_unsafe_id;
@@ -303,10 +348,11 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                         System.out.println("Service is up and running.");
                     }
                     Thread.sleep(3000);
+                    updateContainerTypesystem(_engine_typesystem,true);
                 }
             }
             else {
-                if(_async_scalout!=1) {
+                if(_async_scalout!=1 && _async_scaleout_type.equals(ScaleoutType.SHARED_ANNOTATOR)) {
                     throw new IllegalArgumentException("Can not create a scaleout analysis engine if it does not run in a container!");
                 }
                 _processor = new InContainerEngineProcessor(_cfg_string);
@@ -324,6 +370,9 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
             e.printStackTrace();
             throw new ResourceInitializationException(e);
         } catch (UIMAException e) {
+            e.printStackTrace();
+            throw new ResourceInitializationException(e);
+        } catch (SAXException e) {
             e.printStackTrace();
             throw new ResourceInitializationException(e);
         }
@@ -371,18 +420,20 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                 throw new ResourceInitializationException();
             }
         }
-        HttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpClient httpClient
+                = HttpClients.custom().setConnectionManager(_poolingConnManager).build();
+
         HttpPost httppost = new HttpPost(String.format("http://%s:%s/set_typesystem",_docker_interface.get_ip(),String.valueOf(_dockerport)));
         ByteArrayOutputStream arr = new ByteArrayOutputStream();
-        TypeSystemDescription desc = TypeSystemDescriptionFactory.createTypeSystemDescription();
+        TypeSystemDescription desc = TypeSystemUtil.typeSystem2TypeSystemDescription(ts);
         desc.toXML(arr);
         HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.DEFAULT_BINARY);
         httppost.setEntity(entity);
 
-        HttpResponse httpresp = httpclient.execute(httppost);
+        CloseableHttpResponse httpresp = httpClient.execute(httppost);
         HttpEntity respentity = httpresp.getEntity();
 
-        if(httpresp.getStatusLine().getStatusCode() != 200) {
+        if(httpresp.getCode() != 200) {
             System.err.println("Could not set container typesystem!");
             throw new ResourceInitializationException();
         }
@@ -391,6 +442,7 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
             for (int length; (length = respentity.getContent().read(buffer)) != -1; ) {
             }
         }
+        httpresp.close();
     }
 
     /**
@@ -434,21 +486,21 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
         }
 
         if(_run_in_container) {
+            CloseableHttpClient httpclient = HttpClients.custom()
+                    .setConnectionManager(_poolingConnManager).build();
             try {
-                HttpClient httpclient = HttpClients.createDefault();
                 HttpPost httppost = new HttpPost(_containerurl);
                 ByteArrayOutputStream arr = new ByteArrayOutputStream();
                 XmiSerializationSharedData sharedData = new XmiSerializationSharedData();
-                XmiCasSerializer.serialize(aJCas.getCas(),null,arr,false,sharedData,null,true);
+                XmiCasSerializer.serialize(aJCas.getCas(),_engine_typesystem,arr,false,sharedData,null,true);
 
                 HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
                 httppost.setEntity(entity);
 
-
-                HttpResponse httpresp = httpclient.execute(httppost);
+                CloseableHttpResponse httpresp = httpclient.execute(httppost);
                 HttpEntity respentity = httpresp.getEntity();
 
-                if(httpresp.getStatusLine().getStatusCode() != 200) {
+                if(httpresp.getCode() != 200) {
                     System.err.println("Got an error state!!!");
                     ByteArrayOutputStream result = new ByteArrayOutputStream();
                     byte[] buffer = new byte[1024];
@@ -462,8 +514,10 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                 if (respentity != null) {
                     XmiCasDeserializer.deserialize(respentity.getContent(), aJCas.getCas(), false, sharedData, sharedData.getMaxXmiId(),
                             AllowPreexistingFS.allow);
+                    httpresp.close();
                 }
                 else {
+                    httpresp.close();
                     throw new AnalysisEngineProcessException();
                 }
             } catch (IOException e) {

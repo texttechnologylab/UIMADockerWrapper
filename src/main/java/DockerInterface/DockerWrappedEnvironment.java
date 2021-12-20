@@ -13,7 +13,6 @@ import org.apache.uima.analysis_engine.metadata.SofaMapping;
 import org.apache.uima.fit.factory.AggregateBuilder;
 import org.apache.uima.fit.factory.AnalysisEngineFactory;
 import org.apache.uima.fit.factory.SofaMappingFactory;
-import org.apache.uima.fit.factory.TypeSystemDescriptionFactory;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.ResourceSpecifier;
 import org.apache.uima.util.InvalidXMLException;
@@ -171,12 +170,6 @@ public class DockerWrappedEnvironment {
             }
         }
         _engine = agg.createAggregateDescription();
-        //WARNING: POSSIBLY UNSAFE BUT REDUCES ANNOTATION SIZE BY FACTOR 20
-        for(AnnotatorDescription d : get_recursive_descriptions()) {
-            d.get_underlying_engine().getAnalysisEngineMetaData().setTypeSystem(TypeSystemDescriptionFactory.createTypeSystemDescription("types.ReproducibleAnnotation"));
-            StringWriter xml = new StringWriter();
-            d.get_underlying_engine().getAnalysisEngineMetaData().getTypeSystem().toXML(xml);
-        }
 
         StringWriter wr = new StringWriter();
         _engine.toXML(wr);
@@ -559,7 +552,8 @@ public class DockerWrappedEnvironment {
                 DockerWrapper.PARAM_MAP_DOECKER_DAEMON, container_config.get_unsafe_map_docker_daemon(),
                 DockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations(),
                 DockerWrapper.PARAM_CONTAINER_TIMEOUT, container_config.get_container_initialise_timeout(),
-                DockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, container_config.getContainerScalout());
+                DockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, container_config.getContainerScalout(),
+                DockerWrapper.PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE, container_config.getContainerScaleType().name());
     }
 
     /**
@@ -693,6 +687,30 @@ public class DockerWrappedEnvironment {
         js.put("name",_name);
         js.put("compression",_compression);
         js.put("to_view",_to_view);
+        js.put("resources",getRessources());
+        return js.toString();
+    }
+
+    public JSONObject getRessourcesBase64() {
+        JSONObject resources = new JSONObject();
+        for(Map.Entry<String,byte[]> entries: _ressources.entrySet()) {
+            switch(entries.getKey().substring(0,entries.getKey().indexOf(":")+1)) {
+                case RESSOURCE_TYPE_BINARY:
+                case RESSOURCE_TYPE_ZIP:
+                    resources.put(entries.getKey(), Base64.getEncoder().encode(entries.getValue()));
+                    break;
+                case RESSOURCE_TYPE_STRING:
+                    resources.put(entries.getKey(), new String(entries.getValue(), StandardCharsets.UTF_8));
+                    break;
+                default:
+                    System.err.println(entries.getKey());
+                    throw new InvalidParameterException();
+            }
+        }
+        return resources;
+    }
+
+    public JSONObject getRessources() {
         JSONObject resources = new JSONObject();
         for(Map.Entry<String,byte[]> entries: _ressources.entrySet()) {
             switch(entries.getKey().substring(0,entries.getKey().indexOf(":")+1)) {
@@ -708,7 +726,6 @@ public class DockerWrappedEnvironment {
                     throw new InvalidParameterException();
             }
         }
-        js.put("resources",resources);
-        return js.toString();
+        return resources;
     }
 }

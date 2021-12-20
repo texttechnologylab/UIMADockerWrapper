@@ -3,6 +3,7 @@ package DockerInterface.annotators;
 import DockerInterface.DockerWrappedEnvironment;
 import DockerInterface.DockerWrapper;
 import DockerInterface.DockerWrapperContainerConfiguration;
+import DockerInterface.ScaleoutType;
 import DockerInterface.base_env.DockerBaseJavaEnv;
 import DockerInterface.base_env.DockerBasePythonGPUEnv;
 import DockerInterface.modules.DockerWrapperModuleSkipAlreadyAnnotated;
@@ -79,14 +80,34 @@ public class DockerWrapperTest {
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration
                 .default_config()
                 .with_run_in_container(true)
-                .with_container_autoremove(false)
-                .with_module(DockerWrapperModuleSkipAlreadyAnnotated.class);
-
-        DockerWrappedEnvironment env = DockerWrappedEnvironment.from(AnalysisEngineFactory.createEngineDescription(
+                .with_container_autoremove(false);
+        AggregateBuilder builder = new AggregateBuilder();
+        builder.add(AnalysisEngineFactory.createEngineDescription(
                 ExampleAnnotator.class,
-                ExampleAnnotator.PARAM_PIPELINE_CONFIGURATION, ""
+                ExampleAnnotator.PARAM_PIPELINE_CONFIGURATION, "inner_0"
         ));
+
+        builder.add(AnalysisEngineFactory.createEngineDescription(
+                ExampleAnnotator.class,
+                ExampleAnnotator.PARAM_PIPELINE_CONFIGURATION, "inner_1"
+        ));
+
+        AggregateBuilder intoDepth = new AggregateBuilder();
+        intoDepth.add(builder.createAggregateDescription());
+        DockerWrappedEnvironment env = DockerWrappedEnvironment.from(AnalysisEngineFactory.createEngineDescription(
+                        ExampleAnnotator.class,
+                        ExampleAnnotator.PARAM_PIPELINE_CONFIGURATION, ""
+                ),
+                AnalysisEngineFactory.createEngineDescription(
+                        OpenNlpSegmenter.class
+                ),
+                intoDepth.createAggregateDescription(),
+                AnalysisEngineFactory.createEngineDescription(
+                        OpenNlpPosTagger.class
+                ),
+                builder.createAggregateDescription());
         env.with_pomfile(new File("pom.xml"));
+        env.withResource("src",new File("src"));
 
         JCas jc = JCasFactory.createJCas(desc);
         jc.setDocumentText("This is a very simple text.");
@@ -103,7 +124,7 @@ public class DockerWrapperTest {
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration
                 .default_config()
                 .with_run_in_container(true)
-                .with_container_autoremove(true);
+                .with_container_autoremove(false);
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(AnalysisEngineFactory.createEngineDescription(
                 OpenNlpSegmenter.class
         ));
@@ -872,21 +893,22 @@ public class DockerWrapperTest {
         env.with_compression(CompressorStreamFactory.XZ);
 
         AnalysisEngineDescription cont = env.build(DockerWrapperContainerConfiguration.default_config()
-                .with_run_in_container(true)
+                .with_run_in_container(false)
                 .with_confirm_integrity(false)
-                .with_scaleout(4)
                 .with_container_autoremove(true));
 
-        AsyncPipeline n = new AsyncPipeline(rd,cont);
-        Thread.sleep(2000);
-        n.run();
+        JCas jc = JCasFactory.createJCas();
+        jc.setDocumentText("This is a very simple t'ext.");
+        jc.setDocumentLanguage("en");
+
+        SimplePipeline.runPipeline(jc,cont);
+        System.out.println(DockerWrapperUtil.cas_to_xmi(jc));
     }
 
     @Test
     void performance_comparision() throws UIMAException, IOException, SAXException, CompressorException, InterruptedException {
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration.default_config()
                 .with_run_in_container(true)
-                .with_scaleout(4)
                 .with_container_initialise_timeout(50)
                 .with_container_autoremove(true);
 
@@ -894,12 +916,16 @@ public class DockerWrapperTest {
                 .with_run_in_container(false)
                 .with_container_initialise_timeout(50);
 
+        AggregateBuilder builder = new AggregateBuilder();
+        builder.add(AnalysisEngineFactory.createEngineDescription(ExampleAnnotator.class),"second_view","third_view");
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(
                 AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
                 AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class),
                 AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class),
-                AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class)
-        ).with_name("experiment_1").with_pomfile(new File("pom.xml"));
+                AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class),
+                builder.createAggregateDescription()
+                ).with_name("experiment_1").with_pomfile(new File("pom.xml"))
+                .with_sofa_mapping(CAS.NAME_DEFAULT_SOFA,"other");
 
         DockerWrappedEnvironment env2 = DockerWrappedEnvironment.from(
                         AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
@@ -913,11 +939,12 @@ public class DockerWrapperTest {
                 TextReader.PARAM_PATTERNS, "[+]**/*.txt",
                 TextReader.PARAM_LANGUAGE, "en"
         );
+        System.out.println(DockerWrapperUtil.typesystemToJSON(env2.build(cfg_no_cont).getAnalysisEngineMetaData().getTypeSystem()));
         AnalysisEngine eng2 = AnalysisEngineFactory.createEngine(env2.build(cfg_no_cont));
 
-        AsyncPipeline pipe = new AsyncPipeline(rd,env.build(cfg));
+
         long time_1 = System.currentTimeMillis();
-        pipe.run();
+        AsyncPipeline.run(rd,env.build(cfg));
         long runtime1 = System.currentTimeMillis()-time_1;
 
         time_1 = System.currentTimeMillis();

@@ -12,7 +12,7 @@ public class DockerBaseEnvImpl implements IDockerBaseEnv {
     public DockerBaseEnvImpl() {
         _installs = new LinkedList<String>();
         _execute_command = "CMD /bin/bash";
-        _base_img = "FROM ubuntu:21.04";
+        _base_img = "FROM ubuntu:20.04";
     }
 
     public String get_base_img() {
