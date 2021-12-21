@@ -84,7 +84,7 @@ public class DockerWrapperTest {
         builder.add(AnalysisEngineFactory.createEngineDescription(
                 ExampleAnnotator.class,
                 ExampleAnnotator.PARAM_PIPELINE_CONFIGURATION, "inner_0"
-        ));
+        ),CAS.NAME_DEFAULT_SOFA,"second_view");
 
         builder.add(AnalysisEngineFactory.createEngineDescription(
                 ExampleAnnotator.class,

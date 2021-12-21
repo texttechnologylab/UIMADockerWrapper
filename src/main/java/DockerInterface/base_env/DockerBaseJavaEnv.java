@@ -11,11 +11,12 @@ public class DockerBaseJavaEnv extends DockerBaseEnvImpl {
         add_raw_dockercmd("ENV LC_ALL en_US.UTF-8");
 
         add_raw_dockercmd("ADD ./pom.xml /pom.xml");
-        add_raw_dockercmd("ADD https://kava-i.de/download/reproannotationnlp-0.1-project.tar.bz2 /base.tar.bz2");
-        add_raw_dockercmd("RUN tar -xf /base.tar.bz2");
+        add_raw_dockercmd("ADD https://kava-i.de/download/framework.tar.bz2 /base.tar.bz2");
+        add_raw_dockercmd("RUN mkdir framework");
+        add_raw_dockercmd("RUN tar -xf /base.tar.bz2 -C framework");
         add_raw_dockercmd("RUN mvn dependency:copy-dependencies");
-        add_raw_dockercmd("RUN cd reproannotationnlp-0.1 && mvn compile && mvn dependency:build-classpath -Dmdep.outputFile=mvn_classpath.txt");
-        add_raw_dockercmd("ADD ./cfg /reproannotationnlp-0.1/configuration.reproanno");
+        add_raw_dockercmd("RUN cd framework && mvn compile && mvn dependency:build-classpath -Dmdep.outputFile=mvn_classpath.txt");
+        add_raw_dockercmd("ADD ./cfg /framework/configuration.reproanno");
     }
 
     public DockerBaseJavaEnv(String java_base) {
@@ -29,11 +30,12 @@ public class DockerBaseJavaEnv extends DockerBaseEnvImpl {
         add_raw_dockercmd(String.format("RUN DEBIAN_FRONTEND=noninteractive apt install -y %s",java_base));
         add_raw_dockercmd("RUN DEBIAN_FRONTEND=noninteractive apt install -y maven bzip2");
         add_raw_dockercmd("ADD ./pom.xml /pom.xml");
-        add_raw_dockercmd("ADD https://kava-i.de/download/reproannotationnlp-0.1-project.tar.bz2 /base.tar.bz2");
-        add_raw_dockercmd("RUN tar -xf /base.tar.bz2");
+        add_raw_dockercmd("ADD https://kava-i.de/download/framework.tar.bz2 /base.tar.bz2");
+        add_raw_dockercmd("RUN mkdir framework");
+        add_raw_dockercmd("RUN tar -xf /base.tar.bz2 -C -C framework");
         add_raw_dockercmd("RUN mvn dependency:copy-dependencies");
-        add_raw_dockercmd("RUN cd reproannotationnlp-0.1 && mvn compile && mvn -q exec:exec -Dexec.executable=echo -Dexec.args=\"%classpath\" > mvn_classpath.txt");
-        add_raw_dockercmd("ADD ./cfg /reproannotationnlp-0.1/configuration.reproanno");
+        add_raw_dockercmd("RUN cd framework && mvn compile && mvn -q exec:exec -Dexec.executable=echo -Dexec.args=\"%classpath\" > mvn_classpath.txt");
+        add_raw_dockercmd("ADD ./cfg /framework/configuration.reproanno");
     }
 
     public void enable_python() {
@@ -46,6 +48,6 @@ public class DockerBaseJavaEnv extends DockerBaseEnvImpl {
     }
 
     public String get_execute_command() {
-        return "CMD cd reproannotationnlp-0.1 && java -cp \"target/classes:$(cat mvn_classpath.txt):/target/dependency/*\" DockerInterface.remote.InDockerHttpServer";
+        return "CMD cd framework && java -cp \"target/classes:$(cat mvn_classpath.txt):/target/dependency/*\" DockerInterface.remote.InDockerHttpServer";
     }
 }
