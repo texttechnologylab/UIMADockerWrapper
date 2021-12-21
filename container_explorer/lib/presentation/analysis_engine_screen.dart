@@ -87,28 +87,8 @@ class ValueWidgetState extends State<ValueWidget> {
     if(values!=null && controllers!=null) {
       for(int i = 0; i < controllers!.length; i++) {
         children.add(SizedBox(width: 200,
-        child: TextField(controller: controllers![i],
-          onSubmitted: (String value) {
-            values![i] = value;
-          },
-         decoration: InputDecoration(
-            focusedBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blueAccent, width: 1.0),
-            ),
-            enabledBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey, width: 1.0),
-            ),
-            suffixIcon: (param.multivalued?IconButton(icon: const Icon(Icons.delete),
-            onPressed: (){
-              setState(() {
-                values = values!..removeAt(i);
-                controllers = controllers!..removeAt(i);
-              });
-            }):null),
-            contentPadding: const EdgeInsets.only(top: 0, bottom: 0, left:8, right: 8),
-            isDense: true,
-        ),
-        )));
+        child: Text(values![i]),
+        ));
         children.add(const SizedBox(height: 10));
       }
     }
