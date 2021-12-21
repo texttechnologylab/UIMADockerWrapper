@@ -348,7 +348,7 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                         System.out.println("Service is up and running.");
                     }
                     Thread.sleep(3000);
-                    updateContainerTypesystem(_engine_typesystem,true);
+                    //updateContainerTypesystem(_engine_typesystem,true);
                 }
             }
             else {
@@ -370,9 +370,6 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
             e.printStackTrace();
             throw new ResourceInitializationException(e);
         } catch (UIMAException e) {
-            e.printStackTrace();
-            throw new ResourceInitializationException(e);
-        } catch (SAXException e) {
             e.printStackTrace();
             throw new ResourceInitializationException(e);
         }

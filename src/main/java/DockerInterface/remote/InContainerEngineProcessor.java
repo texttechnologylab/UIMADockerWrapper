@@ -60,11 +60,8 @@ public class InContainerEngineProcessor implements HttpHandler {
 
     public InContainerEngineProcessor(String configuration) throws UIMAException, IOException {
         try {
-            _runner = JCasFactory.createJCas();
             _buffer = new InputOutputBuffer();
-            _last_used_typesystem = _runner.getTypeSystem();
             _cfg_string = configuration;
-            _deserializer = new XCASDeserializer(_last_used_typesystem);
             _configuration = DockerWrappedEnvironment.from(_cfg_string);
             if(!_configuration.get_compression().equals("")) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -86,6 +83,14 @@ public class InContainerEngineProcessor implements HttpHandler {
             Files.write(Paths.get(tempanno), _configuration.get_engine_string_description().getBytes(StandardCharsets.UTF_8));
             _analysis_engine_desc = AnalysisEngineFactory.createEngineDescriptionFromPath(tempanno);
             _mappings = _analysis_engine_desc.getSofaMappings();
+            if(_analysis_engine_desc.isPrimitive()) {
+                _runner = JCasFactory.createJCas(_analysis_engine_desc.getAnalysisEngineMetaData().getTypeSystem());
+            }
+            else {
+                _runner = JCasFactory.createJCas(CasCreationUtils.mergeDelegateAnalysisEngineTypeSystems(_analysis_engine_desc));
+            }
+            _last_used_typesystem = _runner.getTypeSystem();
+            _deserializer = new XCASDeserializer(_last_used_typesystem);
             _analysis_engine = null;
         } catch (InvalidXMLException e) {
             e.printStackTrace();

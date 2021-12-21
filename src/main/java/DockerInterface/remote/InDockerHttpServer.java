@@ -196,13 +196,13 @@ public class InDockerHttpServer {
             }
         });
         InContainerEngineProcessor proc = new InContainerEngineProcessor(new String(Files.readAllBytes(Paths.get("configuration.reproanno")), StandardCharsets.UTF_8));
-        server.createContext("/documentation", new StaticFileHandler("/documentation","flutter_web","index.html"));
         server.createContext("/process", proc);
         server.createContext("/set_typesystem", proc);
         server.createContext("/rest/engine", proc);
         server.createContext("/rest/typesystem", proc);
         server.createContext("/rest/dockerfile", proc);
         server.createContext("/rest/resources", proc);
+        server.createContext("/", new StaticFileHandler("/","web/","index.html"));
         server.setExecutor(null);
         server.start();
         System.out.printf("Server started on port %d\n",9714);

@@ -76,7 +76,6 @@ public class DockerWrapperTest {
     @Test
     void TestRunInContainer() throws UIMAException, IOException, SAXException {
         //This runs the specified engine not in an container but in the host system
-        TypeSystemDescription desc = TypeSystemDescriptionFactory.createTypeSystemDescriptionFromPath("/home/alexander/Documents/BachelorThesis/target/jcasgen/typesystem.xml");
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration
                 .default_config()
                 .with_run_in_container(true)
@@ -109,7 +108,7 @@ public class DockerWrapperTest {
         env.with_pomfile(new File("pom.xml"));
         env.withResource("src",new File("src"));
 
-        JCas jc = JCasFactory.createJCas(desc);
+        JCas jc = JCasFactory.createJCas();
         jc.setDocumentText("This is a very simple text.");
         jc.setDocumentLanguage("en");
 
