@@ -1,4 +1,5 @@
 target/*
+*.tar.bz2
 corpora/*
 .idea/*
 .project
