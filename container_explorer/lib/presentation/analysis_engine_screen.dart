@@ -127,7 +127,7 @@ class AnnotatorWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-        margin: const EdgeInsets.only(left: 10),
+        margin: const EdgeInsets.only(left: 40),
         child: Column(
             children: annotator.parameters.map((e) {
           return ExpansionTile(
