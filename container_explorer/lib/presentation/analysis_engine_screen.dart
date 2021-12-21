@@ -4,8 +4,7 @@ import 'package:container_explorer/bloc/engine_bloc/engine_state.dart';
 import 'package:container_explorer/entities/analysis_engine.dart';
 import 'package:container_explorer/entities/annotator.dart';
 import 'package:container_explorer/entities/parameter.dart';
-import 'package:container_explorer/presentation/nav_drawer.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:container_explorer/presentation/nav_drawer.dart'; import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_fancy_tree_view/flutter_fancy_tree_view.dart';
@@ -114,7 +113,12 @@ class ValueSwitchWidget extends StatelessWidget {
     if (annotator.type != 'Boolean') {
       return ValueWidget(param: annotator);
     } else {
-      return const Text('value');
+      if(annotator.value!=null) {
+        return Text(annotator.value==true?'true':'false');
+      }
+      else {
+        return const Text('null');
+      }
     }
   }
 }
