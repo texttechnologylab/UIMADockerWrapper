@@ -697,7 +697,7 @@ public class DockerWrappedEnvironment {
             switch(entries.getKey().substring(0,entries.getKey().indexOf(":")+1)) {
                 case RESSOURCE_TYPE_BINARY:
                 case RESSOURCE_TYPE_ZIP:
-                    resources.put(entries.getKey(), Base64.getEncoder().encode(entries.getValue()));
+                    resources.put(entries.getKey(), Base64.getEncoder().encodeToString(entries.getValue()));
                     break;
                 case RESSOURCE_TYPE_STRING:
                     resources.put(entries.getKey(), new String(entries.getValue(), StandardCharsets.UTF_8));
