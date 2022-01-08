@@ -1,9 +1,9 @@
+import 'package:container_explorer/bloc/url_event.dart';
+import 'package:container_explorer/bloc/url_selector.dart';
 import 'package:container_explorer/presentation/endpoint_widget.dart';
 import 'package:container_explorer/presentation/nav_drawer.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,7 +14,7 @@ class InformationHeader extends StatelessWidget {
     return Column(children: [
       const SizedBox(height: 20,),
       const Text(
-        'Reproducible UIMA Annotations',
+        'UIMADockerWrapper',
         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
       ),
       const SizedBox(height: 10),
@@ -36,9 +36,14 @@ class InformationScreen extends StatelessWidget {
           backgroundColor: Colors.black87,
           centerTitle: true,
           title: const Text(
-            'Reproducible UIMA Annotations',
-            style: TextStyle(color: Colors.white),
+            'Information',
+            style: TextStyle(fontSize: 22.0, color: Colors.white),
           ),
+          actions: [Tooltip(message: 'Disconnect from container', child: IconButton(onPressed: (){
+            BlocProvider.of<UrlSelector>(context).add(const UrlEvent.disconnect());
+          }, icon: const Icon(
+  Icons.link_off_outlined,
+),))],
         ),
         body: SingleChildScrollView(scrollDirection: Axis.vertical,child: Column(children: [
           const InformationHeader(),

@@ -63,6 +63,11 @@
                             <descriptorRefs>
                                 <descriptorRef>project</descriptorRef>
                             </descriptorRefs>
+                            <filters>
+                                <filter>
+                                    src/**
+                                </filter>
+                            </filters>
                         </configuration>
                     </plugin>
             <plugin>

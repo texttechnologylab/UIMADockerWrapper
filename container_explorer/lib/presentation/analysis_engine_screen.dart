@@ -1,6 +1,8 @@
 import 'package:container_explorer/bloc/engine_bloc/engine_bloc.dart';
 import 'package:container_explorer/bloc/engine_bloc/engine_event.dart';
 import 'package:container_explorer/bloc/engine_bloc/engine_state.dart';
+import 'package:container_explorer/bloc/url_event.dart';
+import 'package:container_explorer/bloc/url_selector.dart';
 import 'package:container_explorer/entities/analysis_engine.dart';
 import 'package:container_explorer/entities/annotator.dart';
 import 'package:container_explorer/entities/parameter.dart';
@@ -8,7 +10,6 @@ import 'package:container_explorer/presentation/nav_drawer.dart'; import 'packag
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_fancy_tree_view/flutter_fancy_tree_view.dart';
-import 'dart:html' as html;
 
 class TreeNodeTile extends StatefulWidget {
   const TreeNodeTile({Key? key}) : super(key: key);
@@ -261,7 +262,7 @@ class AnalysisEngineWidget extends StatelessWidget {
     root.addChild(addchildren(engine, "root", 0));
 
     return TreeView(
-      theme: const TreeViewTheme(lineStyle: LineStyle.disabled, indent: 40),
+      theme: const TreeViewTheme(lineStyle: LineStyle.disabled, indent: 10),
       nodeBuilder: (context, node) {
         return const TreeNodeTile();
       },
@@ -294,6 +295,12 @@ class AnalysisEngineScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var url = '0.0.0.0';
+    var port = 0;
+    context.read<UrlSelector>().state.mapOrNull(loaded: (v) {
+      url = v.url;
+      port = v.port;
+    });
     return Scaffold(
         drawer: const NavDrawer(),
         backgroundColor: Colors.white,
@@ -302,12 +309,17 @@ class AnalysisEngineScreen extends StatelessWidget {
           backgroundColor: Colors.black87,
           centerTitle: true,
           title: const Text(
-            'Reproducible UIMA Annotations',
-            style: TextStyle(color: Colors.white),
+            'Analysis engine',
+            style: TextStyle(fontSize: 20.0, color: Colors.white),
           ),
+          actions: [Tooltip(message: 'Disconnect from container', child: IconButton(onPressed: (){
+            BlocProvider.of<UrlSelector>(context).add(const UrlEvent.disconnect());
+          }, icon: const Icon(
+  Icons.link_off_outlined,
+),))],
         ),
         body: BlocProvider(
-            create: (c) => EngineBloc(url: html.window.location.hostname ?? '127.0.0.1', port: 9714),
+            create: (c) => EngineBloc(url: url, port: port),
             child: const AnalysisEngineWidget()));
   }
 }

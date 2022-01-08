@@ -1,5 +1,8 @@
+import 'package:container_explorer/bloc/url_event.dart';
+import 'package:container_explorer/bloc/url_selector.dart';
+import 'package:container_explorer/bloc/url_state.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class NavDrawer extends StatelessWidget {
   const NavDrawer({Key? key}) : super(key: key);
@@ -8,44 +11,45 @@ class NavDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       child: ListView(
-        padding: const EdgeInsets.all(8),
         children: <Widget>[
-          DrawerHeader(
-            child: SvgPicture.asset('assets/goethe.svg')),
-          const Divider(height: 3,color: Colors.grey,),
+          Container(child: DrawerHeader(
+            child:  Image(image: AssetImage('assets/ttlab.png'))), color: Color(0xFF0069c0)),
+            SizedBox(height: 10),
+          const Text(" UIMADockerWrapper", style: TextStyle(fontSize: 25)),
+          SizedBox(height: 18),
           ListTile(
-            leading: const Icon(Icons.info),
+            leading: Icon(Icons.info),
             title: const Text('Information'),
             onTap: ()  { 
-              Navigator.pushReplacementNamed(context, '/');
+              BlocProvider.of<UrlSelector>(context).add(const UrlEvent.setRoute('/'));
             },
           ),
           ListTile(
             leading: const Icon(Icons.memory),
             title: const Text('Analysis engine'),
             onTap: ()  { 
-              Navigator.pushReplacementNamed(context, '/analysis_engine');
+              BlocProvider.of<UrlSelector>(context).add(const UrlEvent.setRoute('/analysis_engine'));
             },
           ),
           ListTile(
             leading: const Icon(Icons.code),
             title: const Text('Typesystem'),
             onTap: () {
-              Navigator.pushReplacementNamed(context, '/typesystem');
+              BlocProvider.of<UrlSelector>(context).add(const UrlEvent.setRoute('/typesystem'));
             },
           ),
           ListTile(
             leading: const Icon(Icons.folder),
             title: const Text('Dockerfile'),
             onTap: () {
-              Navigator.pushReplacementNamed(context, '/dockerfile');
+              BlocProvider.of<UrlSelector>(context).add(const UrlEvent.setRoute('/dockerfile'));
             }
           ),
           ListTile(
             leading: const Icon(Icons.file_copy),
             title: const Text('Other ressources'),
             onTap: () {
-              Navigator.pushReplacementNamed(context, '/resources');
+              BlocProvider.of<UrlSelector>(context).add(const UrlEvent.setRoute('/resources'));
             },
           ),
           ],

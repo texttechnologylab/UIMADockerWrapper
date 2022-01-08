@@ -2,13 +2,14 @@ import 'dart:math';
 import 'package:container_explorer/bloc/dockerfile_bloc/dockerfile_bloc.dart';
 import 'package:container_explorer/bloc/dockerfile_bloc/dockerfile_event.dart';
 import 'package:container_explorer/bloc/dockerfile_bloc/dockerfile_state.dart';
+import 'package:container_explorer/bloc/url_event.dart';
+import 'package:container_explorer/bloc/url_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import './nav_drawer.dart';
 import 'package:highlight_text/highlight_text.dart';
 import 'package:flutter/services.dart';
-import 'dart:html' as html;
 
 class DockerfileWidget extends StatelessWidget {
   const DockerfileWidget({Key? key}) : super(key: key);
@@ -93,6 +94,13 @@ class DockerfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var url = '0.0.0.0';
+    var port = 0;
+    context.read<UrlSelector>().state.mapOrNull(loaded: (v) {
+      url = v.url;
+      port = v.port;
+    });
+    
     return Scaffold(
     drawer: const NavDrawer(),
     backgroundColor: Colors.white,
@@ -100,9 +108,16 @@ class DockerfileScreen extends StatelessWidget {
       iconTheme: const IconThemeData(color: Colors.white),
       backgroundColor: Colors.black87,
       centerTitle: true,
-      title: const Text('Dockerfile explorer', style: TextStyle(color: Colors.white),),
+      title: const Text('Dockerfile', style: TextStyle(color: Colors.white
+      ,fontSize: 22.0),),
+      actions: [Tooltip(message: 'Disconnect from container', child: IconButton(onPressed: (){
+            BlocProvider.of<UrlSelector>(context).add(const UrlEvent.disconnect());
+          }, icon: const Icon(
+  Icons.link_off_outlined,
+),))],
+
     ),
-    body: BlocProvider(create: (c) => DockerfileBloc(url: html.window.location.hostname ?? '127.0.0.1', port: 9714),
+    body: BlocProvider(create: (c) => DockerfileBloc(url: url, port: port),
     child: const DockerfileWidget())
     );
   }}

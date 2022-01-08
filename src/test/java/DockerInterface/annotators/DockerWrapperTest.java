@@ -956,7 +956,7 @@ public class DockerWrapperTest {
     @Test
     void third_test() throws UIMAException, IOException, SAXException {
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration.default_config()
-                .with_run_in_container(false);
+                .with_run_in_container(true);
 
 //Give the environment a name to later select by name
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(

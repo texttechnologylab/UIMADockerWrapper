@@ -1,14 +1,15 @@
 import 'dart:convert';
-import 'dart:math';
-import 'dart:html' as html;
+import 'dart:typed_data';
 
 import 'package:container_explorer/bloc/resources_bloc/resources_bloc.dart';
 import 'package:container_explorer/bloc/resources_bloc/resources_event.dart';
 import 'package:container_explorer/bloc/resources_bloc/resources_state.dart';
+import 'package:container_explorer/bloc/url_event.dart';
+import 'package:container_explorer/bloc/url_selector.dart';
 import 'package:container_explorer/presentation/nav_drawer.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:file_saver/file_saver.dart';
 
 
 class ResourcesWidget extends StatelessWidget {
@@ -39,19 +40,22 @@ class ResourcesWidget extends StatelessWidget {
                 icon = const Icon(Icons.archive);
               }
               var cleanName = key.substring(key.indexOf(':')+1);
-              return ListTile(leading: icon,title: Text(key.substring(key.indexOf(':')+1)), subtitle: Text(type),trailing: IconButton(onPressed: (){
-                    var blob = html.Blob([e.res[key].toString()], 'text/plain', 'native');
+              return ListTile(leading: icon,title: Text(key.substring(key.indexOf(':')+1)), subtitle: Text(type),trailing: IconButton(onPressed: () async {
+                    Uint8List blob;
                     if (type != 'string') {
-                      blob = html.Blob([base64Decode(e.res[key])], 'application/octet-stream', 'native');
+                      blob = base64Decode(e.res[key]);
+                    }
+                    else {
+                      List<int> list = utf8.encode(e.res[key]);
+                      blob = Uint8List.fromList(list);
                     }
 
                     if(!cleanName.endsWith('zip') && type == 'zip') {
                       cleanName+='.zip';
                     }
-
-                    var anchorElement = html.AnchorElement(
-                        href: html.Url.createObjectUrlFromBlob(blob).toString(),
-                        )..setAttribute("download", cleanName)..click();
+                    await
+                    FileSaver.instance.saveFile(
+                        cleanName, blob,'.txt',mimeType: MimeType.TEXT);
               }, icon: const Icon(Icons.download)),);
             }).toList())
         ));
@@ -65,6 +69,12 @@ class ResourcesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var url = '0.0.0.0';
+    var port = 0;
+    context.read<UrlSelector>().state.mapOrNull(loaded: (v) {
+      url = v.url;
+      port = v.port;
+    });
     return Scaffold(
         drawer: const NavDrawer(),
         backgroundColor: Colors.white,
@@ -73,12 +83,18 @@ class ResourcesScreen extends StatelessWidget {
           backgroundColor: Colors.black87,
           centerTitle: true,
           title: const Text(
-            'Reproducible UIMA Annotations',
-            style: TextStyle(color: Colors.white),
+            'Ressources',
+            style: TextStyle(fontSize: 22.0, color: Colors.white),
           ),
+          actions: [Tooltip(message: 'Disconnect from container', child: IconButton(onPressed: (){
+            BlocProvider.of<UrlSelector>(context).add(const UrlEvent.disconnect());
+          }, icon: const Icon(
+  Icons.link_off_outlined,
+),))],
+
         ),
         body: BlocProvider(
-            create: (c) => ResourcesBloc(url: html.window.location.hostname ?? '127.0.0.1', port: 9714),
+            create: (c) => ResourcesBloc(url: url, port: port),
             child: const ResourcesWidget()));
   }
 }
