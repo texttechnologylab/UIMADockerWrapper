@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.hucompute</groupId>
-    <artifactId>reproannotationnlp</artifactId>
+    <artifactId>uimadockerwrapper</artifactId>
     <version>0.1</version>
     <repositories>
     <repository>
@@ -57,7 +57,7 @@
                         <configuration>
                             <archive>
                                 <manifest>
-                                    <mainClass>DockerInterface.remote.InDockerHttpServer</mainClass>
+                                    <mainClass>org.hucompute.uimadockerwrapper.remote.InDockerHttpServer</mainClass>
                                 </manifest>
                             </archive>
                             <descriptorRefs>
@@ -75,7 +75,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.2.1</version>
                 <configuration>
-                    <mainClass>DockerInterface.remote.InDockerHttpServer</mainClass>
+                    <mainClass>org.hucompute.uimadockerwrapper.remote.InDockerHttpServer</mainClass>
                 </configuration>
             </plugin>
             <plugin>

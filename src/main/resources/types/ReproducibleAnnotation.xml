@@ -1,12 +1,12 @@
 <typeSystemDescription xmlns="http://uima.apache.org/resourceSpecifier">
-    <name>PipelineAnnotatorTypeSystem</name>
-    <description>Type System Definition for the PipelineAnnotator</description>
+    <name>UIMADockerWrapperTypesystem</name>
+    <description>Type System Definition for the UIMADockerWrapper</description>
     <version>1.0</version>
     <vendor>Text Technology Lab</vendor>
     <types>
         <typeDescription>
-            <name>org.hucompute.reproannotationnlp.ReproducibleAnnotation</name>
-            <description>An docker and engine anntation for an annotator</description>
+            <name>org.hucompute.uimadockerwrapper.ReproducibleAnnotation</name>
+            <description>A docker and engine annotation for an annotator</description>
             <supertypeName>uima.tcas.Annotation</supertypeName>
             <features>
 
@@ -33,8 +33,8 @@
         </typeDescription>
         <typeDescription>
 
-            <name>org.hucompute.reproannotationnlp.ReproducibleAnnotationHash</name>
-            <description>An docker and engine anntation for an annotator</description>
+            <name>org.hucompute.uimadockerwrapper.ReproducibleAnnotationHash</name>
+            <description>A hash annotation used to confirm the document integrity</description>
             <supertypeName>uima.tcas.Annotation</supertypeName>
             <features>
                 <featureDescription>
