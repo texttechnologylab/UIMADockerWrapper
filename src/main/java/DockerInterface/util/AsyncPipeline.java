@@ -23,15 +23,13 @@ import org.apache.uima.util.InvalidXMLException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Vector;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 class Worker extends Thread {
     Vector<ConcurrentLinkedQueue<AnalysisEngine>> _flow;
@@ -39,14 +37,16 @@ class Worker extends Thread {
     ArrayBlockingQueue<CAS> _loadedInstances;
     AtomicInteger _threadsAlive;
     AtomicBoolean _shutdown;
+    Function<CAS,CAS> _callback;
 
-    Worker(Vector<ConcurrentLinkedQueue<AnalysisEngine>> engineFlow, ConcurrentLinkedQueue<CAS> emptyInstance, ArrayBlockingQueue<CAS> loadedInstances, AtomicBoolean shutdown, AtomicInteger error) {
+    Worker(Vector<ConcurrentLinkedQueue<AnalysisEngine>> engineFlow, ConcurrentLinkedQueue<CAS> emptyInstance, ArrayBlockingQueue<CAS> loadedInstances, AtomicBoolean shutdown, AtomicInteger error, Function<CAS, CAS> callback) {
         super();
         _flow = engineFlow;
         _instancesToBeLoaded = emptyInstance;
         _loadedInstances = loadedInstances;
         _shutdown = shutdown;
         _threadsAlive = error;
+        _callback = callback;
     }
 
     @Override
@@ -58,7 +58,7 @@ class Worker extends Thread {
             CAS object = null;
 
             try {
-                object = _loadedInstances.poll(400, TimeUnit.MILLISECONDS);
+                object = _loadedInstances.poll(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace(pw);
                 _threadsAlive.addAndGet(-1);
@@ -76,17 +76,19 @@ class Worker extends Thread {
             }
 
             for (int i = 0; i < _flow.size(); i++) {
+                AnalysisEngine engine = null;
                 try {
-                    AnalysisEngine engine;
                     while((engine = _flow.get(i).poll())==null){
                         Thread.yield();
                     }
                     engine.process(object);
                     _flow.get(i).add(engine);
-                } catch (AnalysisEngineProcessException e) {
-                    _threadsAlive.addAndGet(-1);
+                } catch (UIMAException e) {
+                    _flow.get(i).add(engine);
+                    System.exit(-1);
                 }
             }
+            this._callback.apply(object);
             object.reset();
             _instancesToBeLoaded.add(object);
         }
@@ -129,7 +131,7 @@ public class AsyncPipeline {
     }
 
 
-    public static void run(CollectionReaderDescription rd, AnalysisEngineDescription eng) throws UIMAException, IOException, InterruptedException {
+    public static void run(CollectionReaderDescription rd, AnalysisEngineDescription eng, Function<CAS,CAS> callback) throws UIMAException, IOException, InterruptedException {
         Vector<ConcurrentLinkedQueue<AnalysisEngine>> _flow;
         ConcurrentLinkedQueue<CAS> _instancesToBeLoaded;
         ArrayBlockingQueue<CAS> _loadedInstances;
@@ -187,7 +189,7 @@ public class AsyncPipeline {
         _shutdownFlag.set(false);
         Thread []arr = new Thread[_max_concurrent];
         for(int i = 0; i < _max_concurrent; i++) {
-            arr[i] = new Worker(_flow,_instancesToBeLoaded,_loadedInstances,_shutdownFlag,_threadsAlive);
+            arr[i] = new Worker(_flow,_instancesToBeLoaded,_loadedInstances,_shutdownFlag,_threadsAlive,callback);
             arr[i].start();
         }
 
@@ -198,7 +200,6 @@ public class AsyncPipeline {
             }
             reader.getNext(instance);
             _loadedInstances.put(instance);
-            System.out.printf("Number of threads alive %d\n",_threadsAlive.get());
         }
         _shutdownFlag.set(true);
 
@@ -208,5 +209,13 @@ public class AsyncPipeline {
             System.out.printf("Instances to be loaded: %d\n",_loadedInstances.size());
             Thread.sleep(300);
         }
+        for(int i = 0; i < _flow.size(); i++) {
+            Iterator<AnalysisEngine> iter = _flow.get(i).iterator();
+            while(iter.hasNext()) {
+                AnalysisEngine e = iter.next();
+                e.destroy();
+            }
+        }
+
     }
 }

@@ -6,6 +6,7 @@ import DockerInterface.DockerWrapperContainerConfiguration;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.metadata.SofaMapping;
+import org.apache.uima.cas.CAS;
 import org.apache.uima.cas.CASException;
 import org.apache.uima.cas.impl.XCASSerializer;
 import org.apache.uima.collection.CasConsumerDescription;
@@ -429,6 +430,23 @@ public class DockerWrapperUtil {
         XCASSerializer ser = new XCASSerializer(jcas.getTypeSystem());
         XMLSerializer xmlSer = new XMLSerializer(out, true);
         ser.serialize(jcas.getCas(), xmlSer.getContentHandler());
+        String result = new String(out.toByteArray(), "UTF-8");
+        out.close();
+        return result;
+    }
+
+    /**
+     * Convers a cas document to its XMI representation
+     * @param jcas The cas document to convert to a XMI string
+     * @return The XMI representation of the CAS document.
+     * @throws IOException
+     * @throws SAXException
+     */
+    public static String raw_cas_to_xmi(CAS jcas) throws IOException, SAXException {
+        org.apache.commons.io.output.ByteArrayOutputStream out = new org.apache.commons.io.output.ByteArrayOutputStream();
+        XCASSerializer ser = new XCASSerializer(jcas.getTypeSystem());
+        XMLSerializer xmlSer = new XMLSerializer(out, true);
+        ser.serialize(jcas, xmlSer.getContentHandler());
         String result = new String(out.toByteArray(), "UTF-8");
         out.close();
         return result;

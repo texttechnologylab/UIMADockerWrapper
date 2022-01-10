@@ -26,7 +26,6 @@ import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.metadata.TypeDescription;
 import org.apache.uima.resource.metadata.TypeSystemDescription;
 import org.apache.uima.util.*;
-import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.hucompute.reproannotationnlp.ReproducibleAnnotation;
 import org.json.JSONArray;
 import org.json.JSONObject;

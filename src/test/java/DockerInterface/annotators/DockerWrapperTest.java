@@ -10,7 +10,13 @@ import DockerInterface.modules.DockerWrapperModuleSkipAlreadyAnnotated;
 import DockerInterface.util.*;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence;
-import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpNameFinder;
+import de.tudarmstadt.ukp.dkpro.core.languagetool.LanguageToolLemmatizer;
+import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpChunker;
+import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpNamedEntityRecognizer;
+import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpPosTagger;
+import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpSegmenter;
+import de.tudarmstadt.ukp.dkpro.core.tokit.BreakIteratorSegmenter;
+import de.tudarmstadt.ukp.dkpro.core.tokit.CamelCaseTokenSegmenter;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.uima.UIMAException;
@@ -27,14 +33,11 @@ import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.metadata.TypeSystemDescription;
-import org.apache.uima.tools.components.XmiWriterCasConsumer;
 import org.apache.uima.util.InvalidXMLException;
-import de.tudarmstadt.ukp.dkpro.core.languagetool.LanguageToolLemmatizer;
-import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpPosTagger;
-import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpSegmenter;
+import org.dkpro.core.corenlp.CoreNlpPosTagger;
 import org.dkpro.core.io.text.TextReader;
+import org.dkpro.core.stanfordnlp.StanfordNamedEntityRecognizer;
 import org.junit.jupiter.api.Test;
-import org.springframework.scheduling.annotation.Async;
 import org.xml.sax.SAXException;
 
 import java.io.*;
@@ -557,283 +560,320 @@ public class DockerWrapperTest {
                 TextReader.PARAM_SOURCE_LOCATION, "/home/alexander/textimagerserver/stuff",
                 TextReader.PARAM_PATTERNS, "[+]**/*.txt",
                 TextReader.PARAM_LANGUAGE, "en");
-        DockerWrapperUtil.ducc_execute(rd,env.build(cfg),XmiWriterCasConsumer.getDescription());
+        //DockerWrapperUtil.ducc_execute(rd,env.build(cfg),XmiWriterCasConsumer.getDescription());
     }
 
     @Test
-    void EvaluationGermanPolit() throws Exception {
-        //This runs the specified engine not in an container but in the host system
-        AggregateBuilder builder = new AggregateBuilder();
-        builder.add(AnalysisEngineFactory.createEngineDescription(
-                OpenNlpSegmenter.class
-        ));
-
-
-        builder.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
-
-        builder.add(AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class));
-        CollectionReaderDescription rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
-                TextReader.PARAM_SOURCE_LOCATION, "/home/alexander/Documents/BachelorThesis/corpora/German-political-speeches-2019-release/output",
-                TextReader.PARAM_PATTERNS, "[+]**/*.txt",
-                TextReader.PARAM_LANGUAGE, "de");
+    void Evaluation() throws Exception {
+        CollectionReaderDescription rd;
 
 
         Class.forName("org.sqlite.JDBC");
-        Connection c = DriverManager.getConnection("jdbc:sqlite:experiment_germ_polit.db");
-
-        Statement state = c.createStatement();
-        String creat_table = "CREATE TABLE IF NOT EXISTS experiment_evaluation_german_polit(time INTEGER, size INTEGER, with_wrapper INTEGER, in_container INTEGER, with_compression TEXT," +
-                "number_of_annotators INTEGER, confirm_integrity INTEGER)";
-        state.executeUpdate(creat_table);
-        state.close();
-
-        for(int i = 0; i < 24; i++) {
-            int with_wrapper = 0;
-            int in_container = 0;
-            String with_compression = "none";
-            int number_of_annotators = 1;
-            int confirm_integrity = 0;
-            AnalysisEngineDescription desc = null;
-            if(i%4==0) {
-                desc = AnalysisEngineFactory.createEngineDescription(AnalysisEngineFactory.createEngineDescription(
-                        OpenNlpSegmenter.class
-                ));
-            }
-            else if(i%4==1) {
-                AggregateBuilder builder2 = new AggregateBuilder();
-                builder2.add(AnalysisEngineFactory.createEngineDescription(
-                        OpenNlpSegmenter.class
-                ));
+        Connection c = DriverManager.getConnection("jdbc:sqlite:evaluation.db");
 
 
-                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
 
-                desc = builder2.createAggregateDescription();
-            }
-            else if (i%4==2) {
-                AggregateBuilder builder2 = new AggregateBuilder();
-                builder2.add(AnalysisEngineFactory.createEngineDescription(
-                        OpenNlpSegmenter.class
-                ));
-
-
-                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
-                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class));
-                desc = builder2.createAggregateDescription();
-            }
-            else if(i%4==3) {
-                AggregateBuilder builder2 = new AggregateBuilder();
-                builder2.add(AnalysisEngineFactory.createEngineDescription(
-                        OpenNlpSegmenter.class
-                ));
-
-
-                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class));
-                builder2.add(AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class));
-                builder2.add(AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class));
-                desc = builder2.createAggregateDescription();
-            }
-
-            if(i==0) {
-                with_wrapper = 0;
-                in_container = 0;
-                with_compression = "none";
-                number_of_annotators = 1;
-                confirm_integrity = 0;
-            } else if(i==1) {
-                with_wrapper = 0;
-                in_container = 0;
-                with_compression = "none";
-                number_of_annotators = 2;
-                confirm_integrity = 0;
-            }
-            else if(i==2) {
-                with_wrapper = 0;
-                in_container = 0;
-                with_compression = "none";
-                number_of_annotators = 3;
-                confirm_integrity = 0;
-            }
-            else if(i==3) {
-                with_wrapper = 0;
-                in_container = 0;
-                with_compression = "none";
-                number_of_annotators = 4;
-                confirm_integrity = 0;
-            }
-            else if(i==4) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 1;
-                confirm_integrity = 0;
-            }
-            else if(i==5) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 2;
-                confirm_integrity = 0;
-            }
-            else if(i==6) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 3;
-                confirm_integrity = 0;
-            }
-            else if(i==7) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 4;
-                confirm_integrity = 0;
-            }
-            else if(i==8) {
-                with_wrapper = 1;
-                in_container = 1;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 1;
-                confirm_integrity = 0;
-            }
-            else if(i==9) {
-                with_wrapper = 1;
-                in_container = 1;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 2;
-                confirm_integrity = 0;
-            }
-            else if(i==10) {
-                with_wrapper = 1;
-                in_container = 1;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 3;
-                confirm_integrity = 0;
-            }
-            else if(i==11) {
-                with_wrapper = 1;
-                in_container = 1;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 4;
-                confirm_integrity = 0;
-            }
-            else if(i==12) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 1;
-                confirm_integrity = 1;
-            }
-            else if(i==13) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 2;
-                confirm_integrity = 1;
-            }
-            else if(i==14) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 3;
-                confirm_integrity = 1;
-            }
-            else if(i==15) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.XZ;
-                number_of_annotators = 4;
-                confirm_integrity = 1;
-            }
-            else if(i==16) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = "";
-                number_of_annotators = 1;
-                confirm_integrity = 0;
-            }
-            else if(i==17) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = "";
-                number_of_annotators = 2;
-                confirm_integrity = 0;
-            }
-            else if(i==18) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = "";
-                number_of_annotators = 3;
-                confirm_integrity = 0;
-            }
-            else if(i==19) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = "";
-                number_of_annotators = 4;
-                confirm_integrity = 0;
-            }
-            else if(i==20) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.DEFLATE;
-                number_of_annotators = 1;
-                confirm_integrity = 0;
-            }
-            else if(i==21) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.DEFLATE;
-                number_of_annotators = 2;
-                confirm_integrity = 0;
-            }
-            else if(i==22) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.DEFLATE;
-                number_of_annotators = 3;
-                confirm_integrity = 0;
-            }
-            else if(i==23) {
-                with_wrapper = 1;
-                in_container = 0;
-                with_compression = CompressorStreamFactory.DEFLATE;
-                number_of_annotators = 4;
-                confirm_integrity = 0;
+        for(int corpus = 0; corpus < 1; corpus++) {
+            String target = "";
+            String target_async = "";
+            if(corpus==0) {
+                rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
+                        TextReader.PARAM_SOURCE_LOCATION, "/home/alexander/Documents/BachelorThesis/corpora/extract_wikipedia_sample/output",
+                        TextReader.PARAM_PATTERNS, "[+]**/*.txt",
+                        TextReader.PARAM_LANGUAGE, "en");
+                Statement state = c.createStatement();
+                String creat_table = "CREATE TABLE IF NOT EXISTS experiment_en_wikipedia(time INTEGER, size INTEGER, with_wrapper INTEGER, in_container INTEGER, with_compression TEXT," +
+                        "number_of_annotators INTEGER, scaleout INTEGER, confirm_integrity INTEGER)";
+                String creat_table_async = "CREATE TABLE IF NOT EXISTS experiment_en_wikipedia_async(time INTEGER, documents INTEGER, number_of_annotators INTEGER)";
+                state.executeUpdate(creat_table);
+                state.close();
+                Statement stateas = c.createStatement();
+                stateas.executeUpdate(creat_table_async);
+                stateas.close();
+                target = "experiment_en_wikipedia";
+                target_async = "experiment_en_wikipedia_async";
             }
             else {
-                break;
+                rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
+                        TextReader.PARAM_SOURCE_LOCATION, "/home/alexander/Documents/BachelorThesis/corpora/German-political-speeches-2019-release/output",
+                        TextReader.PARAM_PATTERNS, "[+]**/*.txt",
+                        TextReader.PARAM_LANGUAGE, "de");
+                Statement state = c.createStatement();
+                String creat_table = "CREATE TABLE IF NOT EXISTS experiment_germ_polit(time INTEGER, size INTEGER, with_wrapper INTEGER, in_container INTEGER, with_compression TEXT," +
+                        "number_of_annotators INTEGER, scaleout INTEGER, confirm_integrity INTEGER)";
+                String creat_table_async = "CREATE TABLE IF NOT EXISTS experiment_germ_polit_async(time INTEGER, documents INTEGER, number_of_annotators INTEGER)";
+                state.executeUpdate(creat_table);
+
+                state.close();
+                Statement stateas = c.createStatement();
+                stateas.executeUpdate(creat_table_async);
+                stateas.close();
+                target = "experiment_germ_polit";
+                target_async = "experiment_germ_polit_async";
             }
 
-            if(with_wrapper==1) {
-                DockerWrappedEnvironment env = DockerWrappedEnvironment.from(desc);
-                env.with_pomfile(new File("pom.xml"));
-                env.with_compression(with_compression);
-                desc = env.build(DockerWrapperContainerConfiguration.default_config()
-                        .with_run_in_container(in_container==1)
-                        .with_confirm_integrity(confirm_integrity==1)
-                        .with_container_autoremove(true));
-            }
+            for (int i = 27; i > -1; i--) {
+                int with_wrapper = 0;
+                int in_container = 0;
+                String with_compression = "none";
+                int number_of_annotators = 1;
+                int confirm_integrity = 0;
+                boolean async = false;
+                AnalysisEngineDescription desc = null;
+                if (i % 4 == 0) {
+                    desc = AnalysisEngineFactory.createEngineDescription(AnalysisEngineFactory.createEngineDescription(
+                            BreakIteratorSegmenter.class
+                    ));
+                } else if (i % 4 == 1) {
+                    AggregateBuilder builder2 = new AggregateBuilder();
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(BreakIteratorSegmenter.class));
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
+                    desc = builder2.createAggregateDescription();
+                } else if (i % 4 == 2) {
+                    AggregateBuilder builder2 = new AggregateBuilder();
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(BreakIteratorSegmenter.class));
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(CamelCaseTokenSegmenter.class));
+                    desc = builder2.createAggregateDescription();
+                } else if (i % 4 == 3) {
+                    AggregateBuilder builder2 = new AggregateBuilder();
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(BreakIteratorSegmenter.class));
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(CamelCaseTokenSegmenter.class));
+                    builder2.add(AnalysisEngineFactory.createEngineDescription(StanfordNamedEntityRecognizer.class));
+                    desc = builder2.createAggregateDescription();
+                }
+
+                if (i == 0) {
+                    with_wrapper = 0;
+                    in_container = 0;
+                    with_compression = "none";
+                    number_of_annotators = 1;
+                    confirm_integrity = 0;
+                } else if (i == 1) {
+                    with_wrapper = 0;
+                    in_container = 0;
+                    with_compression = "none";
+                    number_of_annotators = 2;
+                    confirm_integrity = 0;
+                } else if (i == 2) {
+                    with_wrapper = 0;
+                    in_container = 0;
+                    with_compression = "none";
+                    number_of_annotators = 3;
+                    confirm_integrity = 0;
+                } else if (i == 3) {
+                    with_wrapper = 0;
+                    in_container = 0;
+                    with_compression = "none";
+                    number_of_annotators = 4;
+                    confirm_integrity = 0;
+                } else if (i == 4) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 1;
+                    confirm_integrity = 0;
+                } else if (i == 5) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 2;
+                    confirm_integrity = 0;
+                } else if (i == 6) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 3;
+                    confirm_integrity = 0;
+                } else if (i == 7) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 4;
+                    confirm_integrity = 0;
+                } else if (i == 8) {
+                    with_wrapper = 1;
+                    in_container = 1;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 1;
+                    confirm_integrity = 0;
+                } else if (i == 9) {
+                    with_wrapper = 1;
+                    in_container = 1;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 2;
+                    confirm_integrity = 0;
+                } else if (i == 10) {
+                    with_wrapper = 1;
+                    in_container = 1;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 3;
+                    confirm_integrity = 0;
+                } else if (i == 11) {
+                    with_wrapper = 1;
+                    in_container = 1;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 4;
+                    confirm_integrity = 0;
+                } else if (i == 12) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 1;
+                    confirm_integrity = 1;
+                } else if (i == 13) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 2;
+                    confirm_integrity = 1;
+                } else if (i == 14) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 3;
+                    confirm_integrity = 1;
+                } else if (i == 15) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 4;
+                    confirm_integrity = 1;
+                } else if (i == 16) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = "";
+                    number_of_annotators = 1;
+                    confirm_integrity = 0;
+                } else if (i == 17) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = "";
+                    number_of_annotators = 2;
+                    confirm_integrity = 0;
+                } else if (i == 18) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = "";
+                    number_of_annotators = 3;
+                    confirm_integrity = 0;
+                } else if (i == 19) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = "";
+                    number_of_annotators = 4;
+                    confirm_integrity = 0;
+                } else if (i == 20) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.DEFLATE;
+                    number_of_annotators = 1;
+                    confirm_integrity = 0;
+                } else if (i == 21) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.DEFLATE;
+                    number_of_annotators = 2;
+                    confirm_integrity = 0;
+                } else if (i == 22) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.DEFLATE;
+                    number_of_annotators = 3;
+                    confirm_integrity = 0;
+                } else if (i == 23) {
+                    with_wrapper = 1;
+                    in_container = 0;
+                    with_compression = CompressorStreamFactory.DEFLATE;
+                    number_of_annotators = 4;
+                    confirm_integrity = 0;
+                } else if (i == 24) {
+                    with_wrapper = 1;
+                    in_container = 1;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 1;
+                    confirm_integrity = 0;
+                    async = true;
+                } else if (i == 25) {
+                    with_wrapper = 1;
+                    in_container = 1;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 2;
+                    confirm_integrity = 0;
+                    async = true;
+                } else if (i == 26) {
+                    with_wrapper = 1;
+                    in_container = 1;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 3;
+                    confirm_integrity = 0;
+                    async = true;
+                } else if (i == 27) {
+                    with_wrapper = 1;
+                    in_container = 1;
+                    with_compression = CompressorStreamFactory.XZ;
+                    number_of_annotators = 4;
+                    confirm_integrity = 0;
+                    async = true;
+                } else {
+                    break;
+                }
+
+                if (with_wrapper == 1 && async == false) {
+                    DockerWrappedEnvironment env = DockerWrappedEnvironment.from(desc);
+                    env.with_pomfile(new File("pom.xml"));
+                    env.with_compression(with_compression);
+                    desc = env.build(DockerWrapperContainerConfiguration.default_config()
+                            .with_run_in_container(in_container == 1)
+                            .with_confirm_integrity(confirm_integrity == 1)
+                            .with_container_autoremove(true));
+                }
 
 
-            Iterator<JCas> iterator = SimplePipeline.iteratePipeline(rd, desc).iterator();
-            PreparedStatement ps = c
-                    .prepareStatement("INSERT INTO experiment_evaluation_german_polit VALUES (?, ?, ?, ?, ?, ?,?);");
-            while (iterator.hasNext()) {
-                long current = System.currentTimeMillis();
-                JCas jc = iterator.next();
-                long endTime = System.currentTimeMillis();
-                long totalTime = endTime - current;
-                long totalSize = DockerWrapperUtil.cas_to_xmi(jc).length();
+                if (!async) {
+                    Iterator<JCas> iterator = SimplePipeline.iteratePipeline(rd, desc).iterator();
+                    PreparedStatement ps = c
+                            .prepareStatement("INSERT INTO "+target+" VALUES (?, ?, ?, ?, ?, ?, ?,?);");
+                    int error_count = 0;
+                    while (iterator.hasNext()) {
+                        long current = System.currentTimeMillis();
+                        JCas jc = iterator.next();
+                        long endTime = System.currentTimeMillis();
+                        long totalTime = endTime - current;
+                        long totalSize = DockerWrapperUtil.cas_to_xmi(jc).length();
 
-                ps.setLong(1, totalTime);
-                ps.setLong(2, totalSize);
-                ps.setInt(3, with_wrapper);
-                ps.setInt(4, in_container);
-                ps.setString(5, with_compression);
-                ps.setInt(6, number_of_annotators);
-                ps.setInt(7,confirm_integrity);
-                ps.executeUpdate();
+                        ps.setLong(1, totalTime);
+                        ps.setLong(2, totalSize);
+                        ps.setInt(3, with_wrapper);
+                        ps.setInt(4, in_container);
+                        ps.setString(5, with_compression);
+                        ps.setInt(6, number_of_annotators);
+                        ps.setInt(7, 1);
+                        ps.setInt(8, confirm_integrity);
+                        ps.executeUpdate();
+                        System.out.printf("Iterator %d\n",i);
+                    }
+                } else {
+                    DockerWrappedEnvironment env = DockerWrappedEnvironment.from(desc);
+                    env.with_pomfile(new File("pom.xml"));
+                    env.with_compression(with_compression);
+                    desc = env.build(DockerWrapperContainerConfiguration.default_config()
+                            .with_run_in_container(true)
+                            .with_confirm_integrity(false)
+                            .with_container_autoremove(true)
+                            .with_scaleout(4));
+                    PreparedStatement ps = c
+                            .prepareStatement("INSERT INTO "+target_async+" VALUES (?, ?, ?);");
+                    long current = System.currentTimeMillis();
+                    AsyncPipeline.run(rd, desc, (a) -> {
+                        return a;
+                    });
+                    ps.setLong(1, System.currentTimeMillis() - current);
+                    ps.setInt(2, 6685);
+                    ps.setInt(3, number_of_annotators);
+                    ps.executeUpdate();
+                }
             }
         }
         c.close();
@@ -909,28 +949,22 @@ public class DockerWrapperTest {
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration.default_config()
                 .with_run_in_container(true)
                 .with_container_initialise_timeout(50)
+                .with_scaleout(4)
                 .with_container_autoremove(true);
 
         DockerWrapperContainerConfiguration cfg_no_cont = DockerWrapperContainerConfiguration.default_config()
                 .with_run_in_container(false)
                 .with_container_initialise_timeout(50);
 
-        AggregateBuilder builder = new AggregateBuilder();
-        builder.add(AnalysisEngineFactory.createEngineDescription(ExampleAnnotator.class),"second_view","third_view");
+
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(
                 AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
-                AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class),
-                AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class),
-                AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class),
-                builder.createAggregateDescription()
-                ).with_name("experiment_1").with_pomfile(new File("pom.xml"))
-                .with_sofa_mapping(CAS.NAME_DEFAULT_SOFA,"other");
+                AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class)
+                ).with_name("experiment_1").with_pomfile(new File("pom.xml"));
 
         DockerWrappedEnvironment env2 = DockerWrappedEnvironment.from(
                         AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
-                        AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class),
-                        AnalysisEngineFactory.createEngineDescription(OpenNlpNameFinder.class),
-                        AnalysisEngineFactory.createEngineDescription(LanguageToolLemmatizer.class)
+                        AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class)
                 ).with_name("experiment_2");
 
         CollectionReaderDescription rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
@@ -943,14 +977,14 @@ public class DockerWrapperTest {
 
 
         long time_1 = System.currentTimeMillis();
-        AsyncPipeline.run(rd,env.build(cfg));
+        AsyncPipeline.run(rd,env.build(cfg), (a) -> a);
         long runtime1 = System.currentTimeMillis()-time_1;
-
+        /*
         time_1 = System.currentTimeMillis();
         SimplePipeline.runPipeline(CollectionReaderFactory.createReader(rd),eng2);
         long runtime2 = System.currentTimeMillis()-time_1;
         System.out.printf("Experiment 1 took %dms\n",runtime1);
-        System.out.printf("Experiment 2 took %dms\n",runtime2);
+        System.out.printf("Experiment 2 took %dms\n",runtime2);*/
     }
 
     @Test
@@ -960,20 +994,30 @@ public class DockerWrapperTest {
 
 //Give the environment a name to later select by name
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(
-                AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
-                AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class)
+                AnalysisEngineFactory.createEngineDescription(BreakIteratorSegmenter.class),
+                AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class),
+                AnalysisEngineFactory.createEngineDescription(CamelCaseTokenSegmenter.class),
+                AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class)
         ).with_name("experiment_1");
 
 //Give the second environment also a name and redirect any changes to the
 //default SoFa to the "second_view". Also write the reproducible annotation
 //generated by the environment into "third_view".
-        DockerWrappedEnvironment env2 = DockerWrappedEnvironment.from(
-                        AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class),
-                        AnalysisEngineFactory.createEngineDescription(OpenNlpPosTagger.class)
-                ).with_name("experiment_2").with_reproducible_annotation_target_view("third_view")
-                .with_sofa_mapping(CAS.NAME_DEFAULT_SOFA,"second_view");
 
 
+        AggregateBuilder builder2 = new AggregateBuilder();
+        /*builder2.add(AnalysisEngineFactory.createEngineDescription(
+                BreakIteratorSegmenter.class
+        ));
+
+
+        builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpPosTagger.class));
+        builder2.add(AnalysisEngineFactory.createEngineDescription(CamelCaseTokenSegmenter.class));
+        builder2.add(AnalysisEngineFactory.createEngineDescription(CoreNlpNamedEntityRecognizer.class));*/
+        AnalysisEngineDescription desc = builder2.createAggregateDescription();
+
+        DockerWrappedEnvironment env2 = DockerWrappedEnvironment.from(desc).with_name("experiment_2")
+                .with_pomfile(new File("pom.xml"));
 //Create a cas with the needed views.
         JCas view_cas = JCasFactory.createJCas();
         view_cas.setDocumentText("This is the first simple example.");

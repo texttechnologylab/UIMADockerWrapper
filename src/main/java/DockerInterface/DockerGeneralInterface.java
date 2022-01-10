@@ -186,6 +186,14 @@ public class DockerGeneralInterface {
     }
 
     /**
+     * Stops the container with the given container id
+     * @param id The id of the container to stop.
+     */
+    public void rm_service(String id) {
+        System.out.printf("Stopping service %s\n",id);
+        _docker.removeServiceCmd(id).withServiceId(id).exec();
+    }
+    /**
      * Exports a running container to a new image.
      * @param containerid The containerid to commit to a new image
      * @param imagename The image name in the format "repository!imagename"

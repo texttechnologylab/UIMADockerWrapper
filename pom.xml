@@ -113,12 +113,7 @@
         </dependency>
 
 
-        <!-- https://mvnrepository.com/artifact/de.tudarmstadt.ukp.dkpro.core/de.tudarmstadt.ukp.dkpro.core.opennlp-model-tagger-en-maxent -->
-        <dependency>
-            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
-            <artifactId>de.tudarmstadt.ukp.dkpro.core.opennlp-model-tagger-en-maxent</artifactId>
-            <version>20120616.1</version>
-        </dependency>
+
 
         <!-- https://mvnrepository.com/artifact/org.apache.uima/uimafit-core -->
         <dependency>
@@ -127,24 +122,6 @@
             <version>2.5.0</version>
         </dependency>
 
-
-        <dependency>
-            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
-            <artifactId>de.tudarmstadt.ukp.dkpro.core.opennlp-asl</artifactId>
-            <version>1.6.2</version>
-        </dependency>
-        <dependency>
-            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
-            <artifactId>de.tudarmstadt.ukp.dkpro.core.languagetool-asl</artifactId>
-            <version>1.6.2</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.dkpro.core/dkpro-core-io-text-asl -->
-        <dependency>
-            <groupId>org.dkpro.core</groupId>
-            <artifactId>dkpro-core-io-text-asl</artifactId>
-            <version>1.12.0</version>
-            <scope>test</scope>
-        </dependency>
 
 
         <dependency>
@@ -170,18 +147,6 @@
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-core</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-impl</artifactId>
             <version>2.3.0</version>
         </dependency>
 
@@ -222,12 +187,7 @@
             <artifactId>jopt-simple</artifactId>
             <version>4.3</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.uima</groupId>
-            <artifactId>uimaj-tools</artifactId>
-            <version>3.0.0</version>
-            <scope>test</scope>
-        </dependency>
+
         <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
         <dependency>
             <groupId>commons-io</groupId>
@@ -246,6 +206,42 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
             <version>1.21</version>
+        </dependency>
+        <dependency>
+            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.core.opennlp-asl</artifactId>
+            <version>1.10.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dkpro.core</groupId>
+            <artifactId>dkpro-core-io-text-asl</artifactId>
+            <version>1.12.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.core.languagetool-asl</artifactId>
+            <version>1.10.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.core.tokit-asl</artifactId>
+            <version>1.9.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dkpro.core</groupId>
+            <artifactId>dkpro-core-corenlp-gpl</artifactId>
+            <version>2.2.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dkpro.core</groupId>
+            <artifactId>dkpro-core-stanfordnlp-gpl</artifactId>
+            <version>1.12.0</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

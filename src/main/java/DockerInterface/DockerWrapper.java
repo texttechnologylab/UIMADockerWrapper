@@ -62,6 +62,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
@@ -178,6 +179,8 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
     private ScaleoutType _async_scaleout_type;
 
     private long _dockerport;
+
+    private AtomicBoolean _shutdown;
 
     PoolingHttpClientConnectionManager _poolingConnManager;
 
@@ -296,7 +299,7 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
             if(_run_in_container) {
                 _poolingConnManager = PoolingHttpClientConnectionManagerBuilder.create()
                         .setDefaultSocketConfig(SocketConfig.custom()
-                                .setSoTimeout(Timeout.ofSeconds(25))
+                                .setSoTimeout(Timeout.ofSeconds(200))
                                 .build())
                         .setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
                         .setConnPoolPolicy(PoolReusePolicy.LIFO)
@@ -341,9 +344,12 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                         System.out.println("Container up and running!");
                     }
                     else {
+                        _shutdown = new AtomicBoolean();
+                        _shutdown.set(false);
                         String service_id = _docker_interface.run_service(image_id,_async_scalout);
                         _dockerport = _docker_interface.extract_service_port_mapping(service_id);
                         _containerurl = String.format("http://%s:%s/process", _docker_interface.get_ip(), String.valueOf(_dockerport));
+                        _containerid = service_id;
                         System.out.printf("Service url: %s\n", _containerurl);
                         System.out.println("Service is up and running.");
                     }
@@ -497,6 +503,7 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                 CloseableHttpResponse httpresp = httpclient.execute(httppost);
                 HttpEntity respentity = httpresp.getEntity();
 
+
                 if(httpresp.getCode() != 200) {
                     System.err.println("Got an error state!!!");
                     ByteArrayOutputStream result = new ByteArrayOutputStream();
@@ -562,6 +569,12 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
             if(_container_unsafe_id.equals("")) {
                 if(_async_scalout==1) {
                     _docker_interface.stop_container(_containerid);
+                }
+                else {
+                    if(_shutdown.get() == false) {
+                        _docker_interface.rm_service(_containerid);
+                        _shutdown.set(true);
+                    }
                 }
             }
             try {
