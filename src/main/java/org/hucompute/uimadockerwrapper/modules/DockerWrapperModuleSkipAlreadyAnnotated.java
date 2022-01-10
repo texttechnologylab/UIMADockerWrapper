@@ -1,6 +1,6 @@
 package org.hucompute.uimadockerwrapper.modules;
 
-import org.hucompute.uimadockerwrapper.DockerWrapper;
+import org.hucompute.uimadockerwrapper.UIMADockerWrapper;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.apache.uima.UimaContext;
 import org.apache.uima.fit.descriptor.ConfigurationParameter;
@@ -17,7 +17,7 @@ import java.util.zip.CRC32;
 
 public class DockerWrapperModuleSkipAlreadyAnnotated extends DockerWrapperBaseImpl {
 
-    @ConfigurationParameter(name= DockerWrapper.PARAM_CFG, mandatory = true)
+    @ConfigurationParameter(name= UIMADockerWrapper.PARAM_CFG, mandatory = true)
     private String _cfg_string;
 
     private String _compressed;
@@ -25,7 +25,7 @@ public class DockerWrapperModuleSkipAlreadyAnnotated extends DockerWrapperBaseIm
 
     @Override
     public void onInitialize(UimaContext aContext, String configuration) throws ResourceInitializationException {
-        _cfg_string = (String)aContext.getConfigParameterValue(DockerWrapper.PARAM_CFG);
+        _cfg_string = (String)aContext.getConfigParameterValue(UIMADockerWrapper.PARAM_CFG);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         XZCompressorOutputStream ot = null;
         try {

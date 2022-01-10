@@ -1,7 +1,7 @@
 package org.hucompute.uimadockerwrapper.util;
 
 import org.hucompute.uimadockerwrapper.DockerWrappedEnvironment;
-import org.hucompute.uimadockerwrapper.DockerWrapper;
+import org.hucompute.uimadockerwrapper.UIMADockerWrapper;
 import org.hucompute.uimadockerwrapper.DockerWrapperContainerConfiguration;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
@@ -486,7 +486,7 @@ public class DockerWrapperUtil {
         long iter = 0;
         long hash = 0;
         try {
-            JCas inital = cas.getView(DockerWrapper.VIEW_NAME_CONFIRM_INTEGRITY);
+            JCas inital = cas.getView(UIMADockerWrapper.VIEW_NAME_CONFIRM_INTEGRITY);
 
             for (ReproducibleAnnotationHash a : JCasUtil.select(inital,ReproducibleAnnotationHash.class)) {
                 hash = a.getConfiguration_crc32();

@@ -1,13 +1,12 @@
 package org.hucompute.uimadockerwrapper.annotators;
 
 import org.hucompute.uimadockerwrapper.DockerWrappedEnvironment;
-import org.hucompute.uimadockerwrapper.DockerWrapper;
+import org.hucompute.uimadockerwrapper.UIMADockerWrapper;
 import org.hucompute.uimadockerwrapper.DockerWrapperContainerConfiguration;
 import org.hucompute.uimadockerwrapper.ReproducibleAnnotation;
 import org.hucompute.uimadockerwrapper.base_env.DockerBaseJavaEnv;
 import org.hucompute.uimadockerwrapper.base_env.DockerBasePythonGPUEnv;
 import org.hucompute.uimadockerwrapper.modules.DockerWrapperModuleSkipAlreadyAnnotated;
-import org.hucompute.uimadockerwrapper.util.*;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence;
 import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpPosTagger;
 import de.tudarmstadt.ukp.dkpro.core.opennlp.OpenNlpSegmenter;
@@ -202,7 +201,7 @@ public class DockerWrapperTest {
         jc.setDocumentText("This is a very simple text.");
         jc.setDocumentLanguage("en");
 
-        SimplePipeline.runPipeline(jc, DockerWrapper.use_existing(cfg));
+        SimplePipeline.runPipeline(jc, UIMADockerWrapper.use_existing(cfg));
         System.out.println(DockerWrapperUtil.cas_to_xmi(jc));
     }
 

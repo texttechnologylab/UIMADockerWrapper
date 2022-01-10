@@ -1,6 +1,6 @@
 package org.hucompute.uimadockerwrapper.annotators;
 
-import org.hucompute.uimadockerwrapper.DockerWrapper;
+import org.hucompute.uimadockerwrapper.UIMADockerWrapper;
 import jep.JepException;
 import jep.SubInterpreter;
 import org.apache.uima.UimaContext;
@@ -58,8 +58,8 @@ public class PythonAnnotator extends JCasAnnotator_ImplBase {
         try {
             CasIOUtils.save(aJCas.getCas(),out, SerialFormat.XMI);
             TypeSystemUtil.typeSystem2TypeSystemDescription(aJCas.getTypeSystem()).toXML(type_system_xmi);
-            _interpreter.exec(String.format("result = annotator.process(\"%s\",\"%s\")",DockerWrapper.escape(new String(out.toByteArray())),
-                    DockerWrapper.escape(type_system_xmi.getBuffer().toString())));
+            _interpreter.exec(String.format("result = annotator.process(\"%s\",\"%s\")", UIMADockerWrapper.escape(new String(out.toByteArray())),
+                    UIMADockerWrapper.escape(type_system_xmi.getBuffer().toString())));
             String result = (String)_interpreter.getValue("result");
             ByteArrayInputStream input = new ByteArrayInputStream(result.getBytes(StandardCharsets.UTF_8));
             CasIOUtils.load(input,aJCas.getCas(), aJCas.getTypeSystem());

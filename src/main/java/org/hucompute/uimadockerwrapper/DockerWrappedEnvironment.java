@@ -16,7 +16,6 @@ import org.apache.uima.fit.factory.SofaMappingFactory;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.ResourceSpecifier;
 import org.apache.uima.util.InvalidXMLException;
-import org.hucompute.uimadockerwrapper.ReproducibleAnnotation;
 import org.json.JSONObject;
 import org.xml.sax.SAXException;
 
@@ -437,7 +436,7 @@ public class DockerWrappedEnvironment {
      * @return The string representation of the DockerWrapper Annotator object.
      */
     public String key() {
-        return DockerWrapper.PARAM_CFG;
+        return UIMADockerWrapper.PARAM_CFG;
     }
 
     /**
@@ -541,19 +540,19 @@ public class DockerWrappedEnvironment {
      */
     public AnalysisEngineDescription build(DockerWrapperContainerConfiguration container_config) throws ResourceInitializationException, IOException, SAXException {
         String cfg = toJsonString();
-        return createEngineDescription(DockerWrapper.class,DockerWrapper.PARAM_CFG,cfg,
-                DockerWrapper.PARAM_CONFIRM_INTEGRITY, container_config.get_confirm_integrity(),
-                DockerWrapper.PARAM_AUTOREMOVE, container_config.get_autoremove(),
-                DockerWrapper.PARAM_CONTAINER_NAME, container_config.get_containername(),
-                DockerWrapper.PARAM_EXPORT_NAME, container_config.get_export_name(),
-                DockerWrapper.PARAM_RUN_IN_CONTAINER, container_config.get_run_in_container(),
-                DockerWrapper.PARAM_REUSE_CONTAINER, container_config.get_reuse_container(),
-                DockerWrapper.PARAM_ADDITIONAL_MODULES, container_config.get_additional_modules(),
-                DockerWrapper.PARAM_MAP_DOECKER_DAEMON, container_config.get_unsafe_map_docker_daemon(),
-                DockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations(),
-                DockerWrapper.PARAM_CONTAINER_TIMEOUT, container_config.get_container_initialise_timeout(),
-                DockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, container_config.getContainerScalout(),
-                DockerWrapper.PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE, container_config.getContainerScaleType().name());
+        return createEngineDescription(UIMADockerWrapper.class, UIMADockerWrapper.PARAM_CFG,cfg,
+                UIMADockerWrapper.PARAM_CONFIRM_INTEGRITY, container_config.get_confirm_integrity(),
+                UIMADockerWrapper.PARAM_AUTOREMOVE, container_config.get_autoremove(),
+                UIMADockerWrapper.PARAM_CONTAINER_NAME, container_config.get_containername(),
+                UIMADockerWrapper.PARAM_EXPORT_NAME, container_config.get_export_name(),
+                UIMADockerWrapper.PARAM_RUN_IN_CONTAINER, container_config.get_run_in_container(),
+                UIMADockerWrapper.PARAM_REUSE_CONTAINER, container_config.get_reuse_container(),
+                UIMADockerWrapper.PARAM_ADDITIONAL_MODULES, container_config.get_additional_modules(),
+                UIMADockerWrapper.PARAM_MAP_DOECKER_DAEMON, container_config.get_unsafe_map_docker_daemon(),
+                UIMADockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations(),
+                UIMADockerWrapper.PARAM_CONTAINER_TIMEOUT, container_config.get_container_initialise_timeout(),
+                UIMADockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, container_config.getContainerScalout(),
+                UIMADockerWrapper.PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE, container_config.getContainerScaleType().name());
     }
 
     /**

@@ -37,7 +37,6 @@ import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.metadata.TypeSystemDescription;
 import org.apache.uima.util.*;
-import org.hucompute.uimadockerwrapper.ReproducibleAnnotationHash;
 import org.xml.sax.SAXException;
 
 import java.nio.charset.StandardCharsets;
@@ -66,7 +65,7 @@ class ConnectionHelper {
  * The basic implementation of the DockerWrapper for the UIMA AnalysisEngineDescription, this annotator builds on request
  * a container which executes the wrapped analysis engine inside of that container.
  */
-public class DockerWrapper extends JCasAnnotator_ImplBase {
+public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
     /**
      * The processor which is either null or the wrapped engine. Will be null when the remote container is used as analysis
      * engine implementation
@@ -181,17 +180,17 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
         if(container_config.get_unsafe_running_container_id().equals("")) {
             throw new InvalidParameterException();
         }
-        AnalysisEngineDescription temp = createEngineDescription(DockerWrapper.class,DockerWrapper.PARAM_CFG,cfg,
-                DockerWrapper.PARAM_CONFIRM_INTEGRITY, container_config.get_confirm_integrity(),
-                DockerWrapper.PARAM_AUTOREMOVE, false,
-                DockerWrapper.PARAM_CONTAINER_NAME, "",
-                DockerWrapper.PARAM_EXPORT_NAME, container_config.get_export_name(),
-                DockerWrapper.PARAM_RUN_IN_CONTAINER, true,
-                DockerWrapper.PARAM_REUSE_CONTAINER, false,
-                DockerWrapper.PARAM_MAP_DOECKER_DAEMON, false,
-                DockerWrapper.PARAM_CONTAINER_ID,container_config.get_unsafe_running_container_id(),
-                DockerWrapper.PARAM_ADDITIONAL_MODULES, container_config.get_additional_modules(),
-                DockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations());
+        AnalysisEngineDescription temp = createEngineDescription(UIMADockerWrapper.class, UIMADockerWrapper.PARAM_CFG,cfg,
+                UIMADockerWrapper.PARAM_CONFIRM_INTEGRITY, container_config.get_confirm_integrity(),
+                UIMADockerWrapper.PARAM_AUTOREMOVE, false,
+                UIMADockerWrapper.PARAM_CONTAINER_NAME, "",
+                UIMADockerWrapper.PARAM_EXPORT_NAME, container_config.get_export_name(),
+                UIMADockerWrapper.PARAM_RUN_IN_CONTAINER, true,
+                UIMADockerWrapper.PARAM_REUSE_CONTAINER, false,
+                UIMADockerWrapper.PARAM_MAP_DOECKER_DAEMON, false,
+                UIMADockerWrapper.PARAM_CONTAINER_ID,container_config.get_unsafe_running_container_id(),
+                UIMADockerWrapper.PARAM_ADDITIONAL_MODULES, container_config.get_additional_modules(),
+                UIMADockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations());
         return temp;
     }
 
@@ -271,7 +270,7 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
                 _async_scaleout_type = ScaleoutType.valueOf(_async_scaleout_desc);
             }
 
-            _modules = _additional_modules.stream().map(DockerWrapper::string_to_module).collect(Collectors.toList());
+            _modules = _additional_modules.stream().map(UIMADockerWrapper::string_to_module).collect(Collectors.toList());
             for(int i = 0; i < _modules.size(); i++) {
                 _modules.get(i).onInitialize(aContext,_additional_modules_config.get(i));
             }
@@ -454,11 +453,11 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
         if(_confirm_integrity) {
             JCas view;
             try {
-                view = aJCas.createView(DockerWrapper.VIEW_NAME_CONFIRM_INTEGRITY);
+                view = aJCas.createView(UIMADockerWrapper.VIEW_NAME_CONFIRM_INTEGRITY);
             }
             catch(Exception e) {
                 try {
-                    view = aJCas.getView(DockerWrapper.VIEW_NAME_CONFIRM_INTEGRITY);
+                    view = aJCas.getView(UIMADockerWrapper.VIEW_NAME_CONFIRM_INTEGRITY);
                 } catch (Exception es) {
                     throw new AnalysisEngineProcessException(es);
                 }
@@ -522,7 +521,7 @@ public class DockerWrapper extends JCasAnnotator_ImplBase {
             System.out.println("Running with confirm integrity.");
             ReproducibleAnnotationHash new_hash = null;
             try {
-                new_hash = new ReproducibleAnnotationHash(aJCas.getView(DockerWrapper.VIEW_NAME_CONFIRM_INTEGRITY));
+                new_hash = new ReproducibleAnnotationHash(aJCas.getView(UIMADockerWrapper.VIEW_NAME_CONFIRM_INTEGRITY));
                 new_hash.setConfiguration_crc32(DockerWrapperUtil.calculate_hash(aJCas));
                 new_hash.addToIndexes();
             } catch (CASException e) {

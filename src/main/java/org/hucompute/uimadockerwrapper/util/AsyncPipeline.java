@@ -1,6 +1,6 @@
 package org.hucompute.uimadockerwrapper.util;
 
-import org.hucompute.uimadockerwrapper.DockerWrapper;
+import org.hucompute.uimadockerwrapper.UIMADockerWrapper;
 import org.hucompute.uimadockerwrapper.ScaleoutType;
 import org.apache.uima.UIMAException;
 import org.apache.uima.analysis_engine.AnalysisEngine;
@@ -93,8 +93,8 @@ class Worker extends Thread {
 public class AsyncPipeline {
     private static void addEngineToExecution(AnalysisEngineDescription engineDescription, Vector<ConcurrentLinkedQueue<AnalysisEngine>> _flow) throws ResourceInitializationException, InterruptedException {
         AnnotatorDescription desc = new AnnotatorDescription(engineDescription);
-        Integer wrp = (Integer)desc.get_unlisted_parameter(DockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS);
-        String type = (String)desc.get_unlisted_parameter(DockerWrapper.PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE);
+        Integer wrp = (Integer)desc.get_unlisted_parameter(UIMADockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS);
+        String type = (String)desc.get_unlisted_parameter(UIMADockerWrapper.PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE);
         ScaleoutType scaleoutType = ScaleoutType.DUPLICATED_ANNOTATOR;
 
         if(type==null && wrp != null) {
