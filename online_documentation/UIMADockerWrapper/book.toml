@@ -1,0 +1,6 @@
+[book]
+authors = ["Alexander Leonhardt"]
+language = "en"
+multilingual = false
+src = "src"
+title = "UIMADockerWrapper"
