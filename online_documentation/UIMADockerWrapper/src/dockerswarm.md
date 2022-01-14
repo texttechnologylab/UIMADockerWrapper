@@ -34,7 +34,7 @@ DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration.de
 // Create the wrapped pipeline from any AnalysisEngineDescription
 DockerWrappedEnvironment env = DockerWrappedEnvironment.from(
   AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class)
-);
+).with_pomfile(new File("pom.xml"));
 
 
 CollectionReaderDescription rd = CollectionReaderFactory.createReaderDescription(TextReader.class,
