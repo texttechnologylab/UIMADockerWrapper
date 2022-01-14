@@ -21,7 +21,7 @@ Next add the dependency for the project:
 <dependency>
     <groupId>com.github.texttechnologylab</groupId>
     <artifactId>UIMADockerWrapper</artifactId>
-    <version>-SNAPSHOT</version>
+    <version>83daf45aaf</version>
 </dependency>
 ```
 
