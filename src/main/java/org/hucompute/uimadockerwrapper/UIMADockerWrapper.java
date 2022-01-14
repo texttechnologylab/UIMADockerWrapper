@@ -498,8 +498,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                     throw new AnalysisEngineProcessException();
                 }
                 if (respentity != null) {
-                    XmiCasDeserializer.deserialize(respentity.getContent(), aJCas.getCas(), false, sharedData, sharedData.getMaxXmiId(),
-                            AllowPreexistingFS.allow);
+                    XmiCasDeserializer.deserialize(respentity.getContent(), aJCas.getCas());
                     httpresp.close();
                 }
                 else {
