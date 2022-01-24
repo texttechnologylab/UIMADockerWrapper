@@ -11,6 +11,21 @@ An example annotator is used to show the wrapping of an annotator which is not n
   <artifactId>de.tudarmstadt.ukp.dkpro.core.opennlp-asl</artifactId>
   <version>1.10.0</version>
 </dependency>
+<dependency>
+  <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+  <artifactId>de.tudarmstadt.ukp.dkpro.core.languagetool-asl</artifactId>
+  <version>1.10.0</version>
+</dependency>
+<dependency>
+  <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+  <artifactId>de.tudarmstadt.ukp.dkpro.core.tokit-asl</artifactId>
+  <version>1.9.2</version>
+</dependency>
+<dependency>
+  <groupId>org.dkpro.core</groupId>
+  <artifactId>dkpro-core-corenlp-gpl</artifactId>
+  <version>2.2.0</version>
+</dependency>
 ```
 
 ## Pom file
@@ -20,12 +35,25 @@ An example pom file is provided here. Due to unknown constraints the library wor
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"> <modelVersion>4.0.0</modelVersion>
-
-    <groupId>org.example</groupId>
-    <artifactId>test_doc</artifactId>
-    <version>1.0-SNAPSHOT</version>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.hucompute</groupId>
+    <artifactId>uimadockerwrapper</artifactId>
+    <version>0.1</version>
     <repositories>
+        <repository>
+            <id>central</id>
+            <name>Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <layout>default</layout>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>ukp-oss-model-releases</id>
+            <url>https://zoidberg.ukp.informatik.tu-darmstadt.de/artifactory/public-model-releases-local</url>
+        </repository>
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -35,16 +63,32 @@ An example pom file is provided here. Due to unknown constraints the library wor
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.github.texttechnologylab</groupId>
             <artifactId>UIMADockerWrapper</artifactId>
-            <version>83daf45aaf</version>
+            <version>83daf45</version>
         </dependency>
         <dependency>
             <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
             <artifactId>de.tudarmstadt.ukp.dkpro.core.opennlp-asl</artifactId>
             <version>1.10.0</version>
+        </dependency>
+        <dependency>
+            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.core.languagetool-asl</artifactId>
+            <version>1.10.0</version>
+        </dependency>
+        <dependency>
+            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.core.tokit-asl</artifactId>
+            <version>1.9.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dkpro.core</groupId>
+            <artifactId>dkpro-core-corenlp-gpl</artifactId>
+            <version>2.2.0</version>
         </dependency>
     </dependencies>
 </project>
