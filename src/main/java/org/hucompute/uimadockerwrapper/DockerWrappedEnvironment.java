@@ -1,8 +1,5 @@
 package org.hucompute.uimadockerwrapper;
 
-import org.hucompute.uimadockerwrapper.base_env.DockerBaseJavaEnv;
-import org.hucompute.uimadockerwrapper.base_env.IDockerBaseEnv;
-import org.hucompute.uimadockerwrapper.util.AnnotatorDescription;
 import com.bubelich.jBaseZ85;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorInputStream;
@@ -16,6 +13,9 @@ import org.apache.uima.fit.factory.SofaMappingFactory;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.ResourceSpecifier;
 import org.apache.uima.util.InvalidXMLException;
+import org.hucompute.uimadockerwrapper.base_env.DockerBaseJavaEnv;
+import org.hucompute.uimadockerwrapper.base_env.IDockerBaseEnv;
+import org.hucompute.uimadockerwrapper.util.AnnotatorDescription;
 import org.json.JSONObject;
 import org.xml.sax.SAXException;
 
@@ -546,6 +546,7 @@ public class DockerWrappedEnvironment {
                 UIMADockerWrapper.PARAM_CONTAINER_NAME, container_config.get_containername(),
                 UIMADockerWrapper.PARAM_EXPORT_NAME, container_config.get_export_name(),
                 UIMADockerWrapper.PARAM_RUN_IN_CONTAINER, container_config.get_run_in_container(),
+                UIMADockerWrapper.PARAM_USE_GPU, container_config.get_use_gpu(),
                 UIMADockerWrapper.PARAM_REUSE_CONTAINER, container_config.get_reuse_container(),
                 UIMADockerWrapper.PARAM_ADDITIONAL_MODULES, container_config.get_additional_modules(),
                 UIMADockerWrapper.PARAM_MAP_DOECKER_DAEMON, container_config.get_unsafe_map_docker_daemon(),
