@@ -335,7 +335,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                         System.out.printf("Service url: %s\n", _containerurl);
                         System.out.println("Service is up and running.");
                     }
-                    Thread.sleep(3000);
+                    Thread.sleep(20000);
                     //updateContainerTypesystem(_engine_typesystem,true);
                 }
             }
