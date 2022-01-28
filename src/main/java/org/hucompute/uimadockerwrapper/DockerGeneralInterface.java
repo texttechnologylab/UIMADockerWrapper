@@ -5,6 +5,7 @@ import com.github.dockerjava.api.exception.DockerClientException;
 import com.github.dockerjava.api.model.*;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
+import com.github.dockerjava.core.command.PushImageResultCallback;
 import com.google.common.collect.ImmutableList;
 
 import java.io.File;
@@ -199,6 +200,10 @@ public class DockerGeneralInterface {
             tag = "localhost/reproducibleanno";
         }
         _docker.tagImageCmd(imagename,tag,imagename).exec();
+        _docker.pushImageCmd(tag)
+                .withTag(imagename)
+                .exec(new PushImageResultCallback())
+                .awaitCompletion(90, TimeUnit.SECONDS);
         ServiceSpec spec = new ServiceSpec();
         ServiceModeConfig cfg = new ServiceModeConfig();
         ServiceReplicatedModeOptions opts = new ServiceReplicatedModeOptions();
@@ -216,6 +221,7 @@ public class DockerGeneralInterface {
         portcfg.add(new PortConfig().withTargetPort(9714).withPublishMode(PortConfig.PublishMode.ingress));
         end.withPorts(portcfg);
         spec.withEndpointSpec(end);
+
         System.out.printf("Spawning %d service replicas",scale);
         CreateServiceResponse cmd = _docker.createServiceCmd(spec).exec();
         return cmd.getId();
