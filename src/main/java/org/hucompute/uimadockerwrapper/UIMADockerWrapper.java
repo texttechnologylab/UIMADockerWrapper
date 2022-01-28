@@ -339,8 +339,37 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                         System.out.printf("Service url: %s\n", _containerurl);
                         System.out.println("Service is up and running.");
                     }
-                    Thread.sleep(70000);
-                    //updateContainerTypesystem(_engine_typesystem,true);
+                    JCas jc = JCasFactory.createJCas();
+                    jc.setDocumentText("This is a simple test");
+                    jc.setDocumentLanguage("en");
+                    while(true) {
+                        CloseableHttpClient httpclient = HttpClients.custom()
+                                .setConnectionManager(_poolingConnManager).build();
+
+                        try {
+                            HttpPost httppost = new HttpPost(_containerurl);
+                            ByteArrayOutputStream arr = new ByteArrayOutputStream();
+                            XmiSerializationSharedData sharedData = new XmiSerializationSharedData();
+                            XmiCasSerializer.serialize(jc.getCas(), _engine_typesystem, arr, false, sharedData, null, true);
+
+                            HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
+                            httppost.setEntity(entity);
+
+                            CloseableHttpResponse httpresp = httpclient.execute(httppost);
+                            HttpEntity respentity = httpresp.getEntity();
+                            if(httpresp.getCode() == 200) {
+                                httpresp.close();
+                                break;
+                            }
+                            httpresp.close();
+                        }
+                        catch(Exception e) {
+
+                        }
+                        System.out.println("Waiting for container to come alive!");
+                        Thread.sleep(1000);
+                    }
+                    System.out.println("Container alive and ready.");
                 }
             }
             else {
