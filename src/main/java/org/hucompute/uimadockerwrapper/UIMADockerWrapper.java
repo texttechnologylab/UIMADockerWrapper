@@ -285,11 +285,11 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
             if(_run_in_container) {
                 _poolingConnManager = PoolingHttpClientConnectionManagerBuilder.create()
                         .setDefaultSocketConfig(SocketConfig.custom()
-                                .setSoTimeout(Timeout.ofSeconds(200))
+                                .setSoTimeout(Timeout.ofSeconds(1800))
                                 .build())
                         .setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
                         .setConnPoolPolicy(PoolReusePolicy.LIFO)
-                        .setConnectionTimeToLive(TimeValue.ofMinutes(1L))
+                        .setConnectionTimeToLive(TimeValue.ofMinutes(60L))
                         .setMaxConnPerRoute(_async_scalout)
                         .setMaxConnTotal(_async_scalout*2)
                         .build();
