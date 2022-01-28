@@ -542,7 +542,6 @@ public class DockerWrappedEnvironment {
         String cfg = toJsonString();
         return createEngineDescription(UIMADockerWrapper.class, UIMADockerWrapper.PARAM_CFG,cfg,
                 UIMADockerWrapper.PARAM_CONFIRM_INTEGRITY, container_config.get_confirm_integrity(),
-                UIMADockerWrapper.PARAM_USE_GPU, container_config.get_use_gpu(),
                 UIMADockerWrapper.PARAM_AUTOREMOVE, container_config.get_autoremove(),
                 UIMADockerWrapper.PARAM_CONTAINER_NAME, container_config.get_containername(),
                 UIMADockerWrapper.PARAM_EXPORT_NAME, container_config.get_export_name(),
