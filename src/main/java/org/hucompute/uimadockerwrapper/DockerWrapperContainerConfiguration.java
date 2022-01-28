@@ -85,6 +85,11 @@ public class DockerWrapperContainerConfiguration {
     private ScaleoutType _scale_type;
 
     /**
+     * Defines the tagname of the repository from which to pull the image.
+     */
+    private String _tag_name;
+
+    /**
      * Creates the default DockerWrapperConfiguration. This includes confirm_integrity = true, run in container = true,
      * container name = "", use gpu = true, autoremove = true, export name = "", reuse container = false, module classes empty,
      * initialise timeout = 20, running container id = "", map daemon = false
@@ -121,6 +126,7 @@ public class DockerWrapperContainerConfiguration {
         _map_daemon = false;
         _scale_type = ScaleoutType.SHARED_ANNOTATOR;
         _scale = 1;
+        _tag_name = "localhost/reproanno";
     }
 
     /**
@@ -139,6 +145,7 @@ public class DockerWrapperContainerConfiguration {
         _running_container_id = js.getString("container_address");
         _map_daemon = js.getBoolean("map_daemon");
         _scale = js.getInt("scaleout");
+        _tag_name = js.getString("tag_name");
         _scale_type = ScaleoutType.valueOf(js.getString("scaletype"));
 
         _module_classes = new LinkedList<String>();
@@ -174,6 +181,7 @@ public class DockerWrapperContainerConfiguration {
         obj.put("map_daemon",_map_daemon);
         obj.put("scalout",_scale);
         obj.put("scaletype",_scale_type.name());
+        obj.put("tag_name",_tag_name);
         return obj.toString();
     }
 
@@ -207,6 +215,15 @@ public class DockerWrapperContainerConfiguration {
         _module_classes.add(clazz.getName());
         _module_configs.add("");
         return this;
+    }
+
+    public DockerWrapperContainerConfiguration with_tag_name(String tag) {
+        _tag_name = tag;
+        return this;
+    }
+
+    public String getContainerTagName() {
+        return _tag_name;
     }
 
     public DockerWrapperContainerConfiguration with_scaleout(int factor) {

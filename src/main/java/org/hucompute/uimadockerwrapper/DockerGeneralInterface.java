@@ -194,8 +194,11 @@ public class DockerGeneralInterface {
         }
     }
 
-    public String run_service(String imagename, int scale) throws InterruptedException {
-        _docker.tagImageCmd(imagename,"localhost/reproducibleanno",imagename).exec();
+    public String run_service(String imagename, int scale, String tag) throws InterruptedException {
+        if(tag==null) {
+            tag = "localhost/reproducibleanno";
+        }
+        _docker.tagImageCmd(imagename,tag,imagename).exec();
         ServiceSpec spec = new ServiceSpec();
         ServiceModeConfig cfg = new ServiceModeConfig();
         ServiceReplicatedModeOptions opts = new ServiceReplicatedModeOptions();
@@ -204,7 +207,7 @@ public class DockerGeneralInterface {
 
         TaskSpec task = new TaskSpec();
         ContainerSpec cont = new ContainerSpec();
-        cont = cont.withImage("localhost/reproducibleanno:"+imagename);
+        cont = cont.withImage(tag+":"+imagename);
         task.withContainerSpec(cont);
 
         spec.withTaskTemplate(task);

@@ -155,6 +155,10 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
     @ConfigurationParameter(name=PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, mandatory = true, defaultValue = "1")
     private int _async_scalout;
 
+    public static final String PARAM_REGISTRY_TAG_NAME = "TEXTTECHNOLOGYLAB_REGISTRY_TAG_NAME";
+    @ConfigurationParameter(name=PARAM_REGISTRY_TAG_NAME, mandatory = false)
+    private String _docker_registry_tagname;
+
     public static final String PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE = "TEXTTECHNOLOGYLAB_ASYNC_SCALEOUT_TYPE";
     @ConfigurationParameter(name=PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE, mandatory = false, defaultValue = "SHARED_ANNOTATOR")
     private String _async_scaleout_desc;
@@ -328,7 +332,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                     else {
                         _shutdown = new AtomicBoolean();
                         _shutdown.set(false);
-                        String service_id = _docker_interface.run_service(image_id,_async_scalout);
+                        String service_id = _docker_interface.run_service(image_id,_async_scalout,_docker_registry_tagname);
                         _dockerport = _docker_interface.extract_service_port_mapping(service_id);
                         _containerurl = String.format("http://%s:%s/process", _docker_interface.get_ip(), String.valueOf(_dockerport));
                         _containerid = service_id;
