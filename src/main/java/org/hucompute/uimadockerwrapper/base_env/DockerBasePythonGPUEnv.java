@@ -31,6 +31,6 @@ public class DockerBasePythonGPUEnv extends DockerBaseEnvImpl {
     }
 
     public String get_execute_command() {
-        return "CMD java -cp \"/target/dependency/*:base.jar\" DockerInterface.remote.InDockerHttpServer";
+        return "CMD cd framework && java -cp \"target/classes:$(cat mvn_classpath.txt):/target/dependency/*:target/uimadockerwrapper-0.1.jar\" org.hucompute.uimadockerwrapper.remote.InDockerHttpServer";
     }
 }

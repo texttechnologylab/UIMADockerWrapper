@@ -554,7 +554,8 @@ public class DockerWrappedEnvironment {
                 UIMADockerWrapper.PARAM_CONTAINER_TIMEOUT, container_config.get_container_initialise_timeout(),
                 UIMADockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, container_config.getContainerScalout(),
                 UIMADockerWrapper.PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE, container_config.getContainerScaleType().name(),
-                UIMADockerWrapper.PARAM_REGISTRY_TAG_NAME,container_config.getContainerTagName());
+                UIMADockerWrapper.PARAM_REGISTRY_TAG_NAME,container_config.getContainerTagName(),
+                UIMADockerWrapper.PARAM_AUTO_STOP,container_config.get_autostop());
     }
 
     /**

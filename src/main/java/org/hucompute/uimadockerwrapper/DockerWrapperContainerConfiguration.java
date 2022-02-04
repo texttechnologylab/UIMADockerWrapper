@@ -90,6 +90,11 @@ public class DockerWrapperContainerConfiguration {
     private String _tag_name;
 
     /**
+     * Automatically stop the service/container at the end
+     */
+    private boolean _auto_stop;
+
+    /**
      * Creates the default DockerWrapperConfiguration. This includes confirm_integrity = true, run in container = true,
      * container name = "", use gpu = true, autoremove = true, export name = "", reuse container = false, module classes empty,
      * initialise timeout = 20, running container id = "", map daemon = false
@@ -126,6 +131,7 @@ public class DockerWrapperContainerConfiguration {
         _map_daemon = false;
         _scale_type = ScaleoutType.SHARED_ANNOTATOR;
         _scale = 1;
+        _auto_stop = true;
         _tag_name = "localhost/reproanno";
     }
 
@@ -146,6 +152,7 @@ public class DockerWrapperContainerConfiguration {
         _map_daemon = js.getBoolean("map_daemon");
         _scale = js.getInt("scaleout");
         _tag_name = js.getString("tag_name");
+        _auto_stop = js.getBoolean("auto_stop");
         _scale_type = ScaleoutType.valueOf(js.getString("scaletype"));
 
         _module_classes = new LinkedList<String>();
@@ -182,6 +189,7 @@ public class DockerWrapperContainerConfiguration {
         obj.put("scalout",_scale);
         obj.put("scaletype",_scale_type.name());
         obj.put("tag_name",_tag_name);
+        obj.put("auto_stop",_auto_stop);
         return obj.toString();
     }
 
@@ -300,6 +308,13 @@ public class DockerWrapperContainerConfiguration {
      */
     public String get_containername() {
         return _container_name;
+    }
+
+    public boolean get_autostop() {return _auto_stop;}
+
+    public DockerWrapperContainerConfiguration with_autostop(boolean auto) {
+        _auto_stop = auto;
+        return this;
     }
 
     /**

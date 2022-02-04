@@ -164,6 +164,10 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
     private String _async_scaleout_desc;
     private ScaleoutType _async_scaleout_type;
 
+    public static final String PARAM_AUTO_STOP = "TEXTTECHNOLOGYLAB_PARAM_AUTO_STOP";
+    @ConfigurationParameter(name=PARAM_AUTO_STOP, mandatory = false)
+    private boolean _auto_stop;
+
     private long _dockerport;
 
     private AtomicBoolean _shutdown;
@@ -583,11 +587,15 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
             }
             if(_container_unsafe_id.equals("")) {
                 if(_async_scalout==1) {
-                    _docker_interface.stop_container(_containerid);
+                    if(_auto_stop) {
+                        _docker_interface.stop_container(_containerid);
+                    }
                 }
                 else {
                     if(_shutdown.get() == false) {
-                        _docker_interface.rm_service(_containerid);
+                        if(_auto_stop) {
+                            _docker_interface.rm_service(_containerid);
+                        }
                         _shutdown.set(true);
                     }
                 }

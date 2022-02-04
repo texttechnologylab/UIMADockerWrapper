@@ -169,11 +169,10 @@ public class DockerWrapperTest {
                 .with_run_in_container(true)
                 .with_container_autoremove(true)
                 .with_gpu(true)
+                .with_tag_name("ip:port")
                 .with_export_to_new_image("gpu_exp","v0.0alpha");
 
         DockerBasePythonGPUEnv env = new DockerBasePythonGPUEnv("FROM nvidia/cuda:11.2.0-devel-ubuntu20.04");
-        env.add_install_requirement("torch==1.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html");
-        env.add_raw_dockercmd("RUN wget https://raw.githubusercontent.com/ShadowItaly/ReproducibleAnnotations/master/python_impl/test/TorchAnnotator.py");
 
         DockerWrappedEnvironment wrapped_env = DockerWrappedEnvironment.from(AnalysisEngineFactory.createEngineDescription(
                 PythonAnnotator.class,
@@ -196,14 +195,16 @@ public class DockerWrapperTest {
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration
                 .default_config()
                 .with_gpu(true)
-                .with_unsafe_running_container_id("c63e8a4f9f3d");
+                .with_unsafe_running_container_id("6b5ca96930c7");
 
         JCas jc = JCasFactory.createJCas();
         jc.setDocumentText("This is a very simple text.");
         jc.setDocumentLanguage("en");
-
-        SimplePipeline.runPipeline(jc, UIMADockerWrapper.use_existing(cfg));
         System.out.println(DockerWrapperUtil.cas_to_xmi(jc));
+        //return;
+
+        //SimplePipeline.runPipeline(jc, UIMADockerWrapper.use_existing(cfg));
+        //System.out.println(DockerWrapperUtil.cas_to_xmi(jc));
     }
 
     @Test
@@ -991,21 +992,17 @@ public class DockerWrapperTest {
 
 // The annotation should be made within a container
         DockerWrapperContainerConfiguration cfg = DockerWrapperContainerConfiguration.default_config()
-                .with_run_in_container(true);
+                .with_run_in_container(true)
+                .with_unsafe_map_docker_daemon(true);
 
 // Create the wrapped pipeline from any AnalysisEngineDescription
         DockerWrappedEnvironment env = DockerWrappedEnvironment.from(
                 AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class)
         );
 
+        AnalysisEngineDescription desc2 = env.build(cfg);
 // Create the docker container, note the programm must have access to the docker daemon,
 // therefore the programm must either run as root or the current user has access to the daemon
-        SimplePipeline.runPipeline(test_c,env.build(cfg));
-
-        JCas second = JCasFactory.createJCas();
-        second.setDocumentText("Simple change's in the pipelines used.");
-        second.setDocumentLanguage("en");
-        AnalysisEngineDescription desc = DockerWrapperUtil.fromJCas(test_c,cfg);
-        SimplePipeline.runPipeline(second,desc);
+        SimplePipeline.runPipeline(test_c,desc2);
     }
 }
