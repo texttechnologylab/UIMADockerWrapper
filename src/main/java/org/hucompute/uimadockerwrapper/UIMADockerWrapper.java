@@ -173,8 +173,6 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
 
     private AtomicBoolean _shutdown;
 
-    PoolingHttpClientConnectionManager _poolingConnManager;
-
     private TypeSystem _engine_typesystem;
     /**
      * Uses the existing docker container and binds the container to the DockerWrapper
@@ -288,17 +286,6 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
 
             _engine_typesystem = JCasFactory.createJCas(CasCreationUtils.mergeDelegateAnalysisEngineTypeSystems(_configuration.get_engine_description())).getTypeSystem();
             if(_run_in_container) {
-                _poolingConnManager = PoolingHttpClientConnectionManagerBuilder.create()
-                        .setDefaultSocketConfig(SocketConfig.custom()
-                                .setSoTimeout(Timeout.ofSeconds(1800))
-                                .build())
-                        .setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
-                        .setConnPoolPolicy(PoolReusePolicy.LIFO)
-                        .setConnectionTimeToLive(TimeValue.ofSeconds(10))
-                        .setMaxConnPerRoute(_async_scalout)
-                        .setMaxConnTotal(_async_scalout*2)
-                        .build();
-
                 if(!_container_unsafe_id.equals("")) {
                     _docker_interface = new DockerGeneralInterface();
                     _containerid = _container_unsafe_id;
@@ -435,7 +422,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
             }
         }
         CloseableHttpClient httpClient
-                = HttpClients.custom().setConnectionManager(_poolingConnManager).build();
+                = HttpClients.createDefault();
 
         HttpPost httppost = new HttpPost(String.format("http://%s:%s/set_typesystem",_docker_interface.get_ip(),String.valueOf(_dockerport)));
         ByteArrayOutputStream arr = new ByteArrayOutputStream();
@@ -500,39 +487,29 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
         }
 
         if(_run_in_container) {
-            CloseableHttpClient httpclient = HttpClients.custom()
-                    .setConnectionManager(_poolingConnManager).build();
             try {
-                HttpPost httppost = new HttpPost(_containerurl);
                 ByteArrayOutputStream arr = new ByteArrayOutputStream();
                 XmiCasSerializer.serialize(aJCas.getCas(),arr);
 
-                System.out.println(new String(arr.toByteArray()));
-                HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
-                httppost.setEntity(entity);
+                MediaType XML
+                        = MediaType.get("text/xml; charset=utf-8");
 
-                CloseableHttpResponse httpresp = httpclient.execute(httppost);
-                HttpEntity respentity = httpresp.getEntity();
+                OkHttpClient client = new OkHttpClient();
 
+                RequestBody body = RequestBody.create(new String(arr.toByteArray()), XML);
+                Request request = new Request.Builder()
+                        .url(_containerurl)
+                        .post(body)
+                        .build();
+                Response response = client.newCall(request).execute();
 
-                if(httpresp.getCode() != 200) {
+                if(response.code() != 200) {
                     System.err.println("Got an error state!!!");
-                    ByteArrayOutputStream result = new ByteArrayOutputStream();
-                    byte[] buffer = new byte[1024];
-                    for (int length; (length = respentity.getContent().read(buffer)) != -1; ) {
-                        result.write(buffer, 0, length);
-                    }
-                    // StandardCharsets.UTF_8.name() > JDK 7
-                    System.err.println(result.toString("UTF-8"));
+                    System.err.println(new String(response.body().bytes()));
                     throw new AnalysisEngineProcessException();
-                }
-                if (respentity != null) {
-                    XmiCasDeserializer.deserialize(respentity.getContent(), aJCas.getCas());
-                    httpresp.close();
                 }
                 else {
-                    httpresp.close();
-                    throw new AnalysisEngineProcessException();
+                    XmiCasDeserializer.deserialize(response.body().byteStream(), aJCas.getCas());
                 }
             } catch (IOException e) {
                 e.printStackTrace();
