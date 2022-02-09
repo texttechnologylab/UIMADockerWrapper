@@ -293,7 +293,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                                 .build())
                         .setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
                         .setConnPoolPolicy(PoolReusePolicy.LIFO)
-                        .setConnectionTimeToLive(TimeValue.ofSeconds(2))
+                        .setConnectionTimeToLive(TimeValue.ofSeconds(10))
                         .setMaxConnPerRoute(_async_scalout)
                         .setMaxConnTotal(_async_scalout*2)
                         .build();
@@ -364,7 +364,6 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                                 httpresp.close();
                             }
                         }
-                        httpclient.close();
                         System.out.println("Waiting for container to come alive!");
                         Thread.sleep(1000);
                     }
