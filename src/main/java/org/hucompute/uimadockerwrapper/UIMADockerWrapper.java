@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.Socket;
 import java.nio.file.Path;
 
+import okhttp3.*;
 import org.hucompute.uimadockerwrapper.modules.DockerWrapperModuleErrorImplementation;
 import org.hucompute.uimadockerwrapper.modules.IDockerWrapperModule;
 import org.hucompute.uimadockerwrapper.remote.InContainerEngineProcessor;
@@ -336,36 +337,33 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                     jc.setDocumentText("This is a simple test");
                     jc.setDocumentLanguage("en");
                     while(true) {
-                        CloseableHttpClient httpclient = HttpClients.custom().setConnectionManager(_poolingConnManager).build();
-
-
-                        CloseableHttpResponse httpresp = null;
                         try {
-                            HttpPost httppost = new HttpPost(_containerurl);
                             ByteArrayOutputStream arr = new ByteArrayOutputStream();
-                            XmiCasSerializer.serialize(jc.getCas(),arr);
-                            System.out.printf("Accessing url %s\n with cas %s",_containerurl,new String(arr.toByteArray()));
+                            XmiCasSerializer.serialize(jc.getCas(), arr);
+                            System.out.printf("Accessing url %s\n with cas %s", _containerurl, new String(arr.toByteArray()));
+                            MediaType XML
+                                    = MediaType.get("text/xml; charset=utf-8");
 
+                            OkHttpClient client = new OkHttpClient();
 
-                            HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
-                            httppost.setEntity(entity);
-
-                            httpresp = httpclient.execute(httppost);
-                            HttpEntity respentity = httpresp.getEntity();
-                            if(httpresp.getCode() == 200) {
-                                httpresp.close();
+                            RequestBody body = RequestBody.create(new String(arr.toByteArray()), XML);
+                            Request request = new Request.Builder()
+                                    .url(_containerurl)
+                                    .post(body)
+                                    .build();
+                            Response response = client.newCall(request).execute();
+                            if (response.code() == 200) {
                                 break;
                             }
-                            httpresp.close();
-                        }
-                        catch(Exception e) {
+                            System.out.println("Waiting for container to come alive!");
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
                             e.printStackTrace();
-                            if(httpresp != null) {
-                                httpresp.close();
-                            }
+                        } catch (SAXException e) {
+                            e.printStackTrace();
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-                        System.out.println("Waiting for container to come alive!");
-                        Thread.sleep(1000);
                     }
                     System.out.println("Container alive and ready.");
                 }
