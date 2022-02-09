@@ -11,7 +11,7 @@ public class DockerBaseJavaEnv extends DockerBaseEnvImpl {
         add_raw_dockercmd("ENV LC_ALL en_US.UTF-8");
 
         add_raw_dockercmd("ADD ./pom.xml /pom.xml");
-        add_raw_dockercmd("ADD https://kava-i.de/download/framework.tar.bz2 /base.tar.bz2");
+        add_raw_dockercmd("ADD https://kava-i.de/download/framework2.tar.bz2 /base.tar.bz2");
         add_raw_dockercmd("RUN mkdir framework");
         add_raw_dockercmd("RUN tar -xf /base.tar.bz2 -C framework");
         add_raw_dockercmd("RUN mvn dependency:copy-dependencies");
@@ -30,7 +30,7 @@ public class DockerBaseJavaEnv extends DockerBaseEnvImpl {
         add_raw_dockercmd(String.format("RUN DEBIAN_FRONTEND=noninteractive apt install -y %s",java_base));
         add_raw_dockercmd("RUN DEBIAN_FRONTEND=noninteractive apt install -y maven bzip2");
         add_raw_dockercmd("ADD ./pom.xml /pom.xml");
-        add_raw_dockercmd("ADD https://kava-i.de/download/framework.tar.bz2 /base.tar.bz2");
+        add_raw_dockercmd("ADD https://kava-i.de/download/framework2.tar.bz2 /base.tar.bz2");
         add_raw_dockercmd("RUN mkdir framework");
         add_raw_dockercmd("RUN tar -xf /base.tar.bz2 -C -C framework");
         add_raw_dockercmd("RUN mvn dependency:copy-dependencies");

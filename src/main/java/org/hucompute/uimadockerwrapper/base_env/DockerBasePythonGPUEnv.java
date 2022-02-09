@@ -7,7 +7,7 @@ public class DockerBasePythonGPUEnv extends DockerBaseEnvImpl {
         add_raw_dockercmd("ADD ./pom.xml /pom.xml");
         add_raw_dockercmd("ADD ./cfg /configuration.reproanno");
         add_raw_dockercmd("ENV CLASSPATH target/dependencies/*;base.jar");
-        add_raw_dockercmd("ADD https://kava-i.de/download/framework.tar.bz2 base.jar");
+        add_raw_dockercmd("ADD https://kava-i.de/download/framework2.tar.bz2 base.jar");
         add_raw_dockercmd("RUN mvn dependency:copy-dependencies");
         add_raw_dockercmd("RUN export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64");
         add_raw_dockercmd("RUN DEBIAN_FRONTEND=noninteractive apt install -y python pip");

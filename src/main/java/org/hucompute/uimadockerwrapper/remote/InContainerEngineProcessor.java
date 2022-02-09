@@ -299,8 +299,7 @@ public class InContainerEngineProcessor implements HttpHandler {
                 return;
             }
             _runner.reset();
-            XmiSerializationSharedData sharedData = new XmiSerializationSharedData();
-            XmiCasDeserializer.deserialize(t.getRequestBody(),_runner.getCas(),true,sharedData);
+            XmiCasDeserializer.deserialize(t.getRequestBody(),_runner.getCas());
             Marker a = _runner.getCas().createMarker();
             process(_runner);
 
@@ -309,7 +308,7 @@ public class InContainerEngineProcessor implements HttpHandler {
             header.add("Keep-Alive", "timeout=20 max=100");
             t.sendResponseHeaders(200, 0);
             OutputStream response = t.getResponseBody();
-            XmiCasSerializer.serialize(_runner.getCas(), null,response,false,sharedData,a,true);
+            XmiCasSerializer.serialize(_runner.getCas(), null,response);
             response.close();
             return;
         } catch (AnalysisEngineProcessException e) {
