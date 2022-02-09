@@ -293,7 +293,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                                 .build())
                         .setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
                         .setConnPoolPolicy(PoolReusePolicy.LIFO)
-                        .setConnectionTimeToLive(TimeValue.ofMinutes(60L))
+                        .setConnectionTimeToLive(TimeValue.ofSeconds(2))
                         .setMaxConnPerRoute(_async_scalout)
                         .setMaxConnTotal(_async_scalout*2)
                         .build();
@@ -336,7 +336,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                     jc.setDocumentText("This is a simple test");
                     jc.setDocumentLanguage("en");
                     while(true) {
-                        CloseableHttpClient httpclient = HttpClients.createDefault();
+                        CloseableHttpClient httpclient = HttpClients.custom().setConnectionManager(_poolingConnManager).build();
 
 
                         CloseableHttpResponse httpresp = null;
