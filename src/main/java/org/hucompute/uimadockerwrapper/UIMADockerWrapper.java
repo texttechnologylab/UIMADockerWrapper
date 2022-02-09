@@ -322,15 +322,36 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                         System.out.printf("Container url: %s\n", _containerurl);
                         System.out.println("Waiting on container startup!");
                         long seconds = 0;
-                        String log = "";
-                        while (!(log += _docker_interface.get_logs(_containerid)).contains("Server started on port 9714")) {
-                            Thread.sleep(1000);
-                            seconds += 1;
-                            if (seconds >= _container_initialise_timeout) {
-                                System.err.println(log);
-                                throw new ResourceInitializationException();
+                    JCas jc = JCasFactory.createJCas();
+                    jc.setDocumentText("This is a simple test");
+                    jc.setDocumentLanguage("en");
+                    while(true) {
+                        CloseableHttpClient httpclient = HttpClients.custom()
+                                .setConnectionManager(_poolingConnManager).build();
+
+                        try {
+                            HttpPost httppost = new HttpPost(_containerurl);
+                            ByteArrayOutputStream arr = new ByteArrayOutputStream();
+                            XmiSerializationSharedData sharedData = new XmiSerializationSharedData();
+                            XmiCasSerializer.serialize(jc.getCas(), _engine_typesystem, arr, false, sharedData, null, true);
+
+                            HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
+                            httppost.setEntity(entity);
+
+                            CloseableHttpResponse httpresp = httpclient.execute(httppost);
+                            HttpEntity respentity = httpresp.getEntity();
+                            if(httpresp.getCode() == 200) {
+                                httpresp.close();
+                                break;
                             }
+                            httpresp.close();
                         }
+                        catch(Exception e) {
+
+                        }
+                        System.out.println("Waiting for container to come alive!");
+                        Thread.sleep(1000);
+                    }
                         System.out.println("Container up and running!");
                     }
                     else {
