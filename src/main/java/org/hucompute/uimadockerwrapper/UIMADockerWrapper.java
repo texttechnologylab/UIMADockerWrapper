@@ -340,7 +340,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                                     .url(_containerurl)
                                     .post(body)
                                     .build();
-                            Response response = client.newCall(request).execute();
+                            Response response = _client.newCall(request).execute();
                             if (response.code() == 200) {
                                 break;
                             }
