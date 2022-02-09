@@ -325,10 +325,10 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                     JCas jc = JCasFactory.createJCas();
                     jc.setDocumentText("This is a simple test");
                     jc.setDocumentLanguage("en");
-                    while(true) {
-                        CloseableHttpClient httpclient = HttpClients.custom()
+                    Thread.sleep(2000);
+                    CloseableHttpClient httpclient = HttpClients.custom()
                                 .setConnectionManager(_poolingConnManager).build();
-
+                    while(true) {
                         try {
                             HttpPost httppost = new HttpPost(_containerurl);
                             ByteArrayOutputStream arr = new ByteArrayOutputStream();
