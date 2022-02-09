@@ -334,6 +334,8 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                             ByteArrayOutputStream arr = new ByteArrayOutputStream();
                             XmiCasSerializer.serialize(jc.getCas(), arr);
 
+                            System.out.println(new String(arr.toByteArray()));
+
                             HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
                             httppost.setEntity(entity);
 
