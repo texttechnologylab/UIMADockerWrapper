@@ -327,7 +327,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                         try {
                             ByteArrayOutputStream arr = new ByteArrayOutputStream();
                             XmiCasSerializer.serialize(jc.getCas(), arr);
-                            System.out.printf("Accessing url %s with cas %s\n", _containerurl, new String(arr.toByteArray()));
+                            //System.out.printf("Accessing url %s with cas %s\n", _containerurl, new String(arr.toByteArray()));
                             MediaType XML
                                     = MediaType.get("text/xml; charset=utf-8");
 
