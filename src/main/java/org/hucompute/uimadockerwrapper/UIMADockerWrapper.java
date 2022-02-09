@@ -345,11 +345,11 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                             System.out.println("Waiting for container to come alive!");
                             Thread.sleep(1000);
                         } catch (InterruptedException e) {
-                            e.printStackTrace();
+                            //e.printStackTrace();
                         } catch (SAXException e) {
-                            e.printStackTrace();
+                            //e.printStackTrace();
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            //e.printStackTrace();
                         }
                     }
                     System.out.println("Container alive and ready.");
