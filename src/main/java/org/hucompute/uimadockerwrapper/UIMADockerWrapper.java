@@ -339,16 +339,16 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                         CloseableHttpClient httpclient = HttpClients.createDefault();
 
 
+                        CloseableHttpResponse httpresp = null;
                         try {
                             HttpPost httppost = new HttpPost(_containerurl);
                             ByteArrayOutputStream arr = new ByteArrayOutputStream();
-                            XmiSerializationSharedData sharedData = new XmiSerializationSharedData();
                             XmiCasSerializer.serialize(jc.getCas(),arr);
 
                             HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
                             httppost.setEntity(entity);
 
-                            CloseableHttpResponse httpresp = httpclient.execute(httppost);
+                            httpresp = httpclient.execute(httppost);
                             HttpEntity respentity = httpresp.getEntity();
                             if(httpresp.getCode() == 200) {
                                 httpresp.close();
@@ -358,6 +358,9 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                         }
                         catch(Exception e) {
                             e.printStackTrace();
+                            if(httpresp != null) {
+                                httpresp.close();
+                            }
                         }
                         httpclient.close();
                         System.out.println("Waiting for container to come alive!");
