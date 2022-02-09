@@ -174,6 +174,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
     private AtomicBoolean _shutdown;
 
     private TypeSystem _engine_typesystem;
+    private OkHttpClient _client;
     /**
      * Uses the existing docker container and binds the container to the DockerWrapper
      * @param container_config The configuration of the container which only needs to set the export name, the container id and the module configurations
@@ -270,6 +271,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
         super.initialize(aContext);
 
         try {
+            _client = new OkHttpClient();
             if(_async_scaleout_desc==null) {
                 _async_scaleout_type = ScaleoutType.SHARED_ANNOTATOR;
             }
@@ -331,7 +333,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                             MediaType XML
                                     = MediaType.get("text/xml; charset=utf-8");
 
-                            OkHttpClient client = new OkHttpClient();
+
 
                             RequestBody body = RequestBody.create(new String(arr.toByteArray()), XML);
                             Request request = new Request.Builder()
@@ -494,14 +496,13 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                 MediaType XML
                         = MediaType.get("text/xml; charset=utf-8");
 
-                OkHttpClient client = new OkHttpClient();
 
                 RequestBody body = RequestBody.create(new String(arr.toByteArray()), XML);
                 Request request = new Request.Builder()
                         .url(_containerurl)
                         .post(body)
                         .build();
-                Response response = client.newCall(request).execute();
+                Response response = _client.newCall(request).execute();
 
                 if(response.code() != 200) {
                     System.err.println("Got an error state!!!");
@@ -549,6 +550,8 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
      */
     @Override
     public void destroy() {
+        _client.dispatcher().executorService().shutdown();
+        _client.connectionPool().evictAll();
         if(_run_in_container) {
             if(_async_scalout==1) {
                 _docker_interface.export_to_new_image(_containerid, _export_name);
