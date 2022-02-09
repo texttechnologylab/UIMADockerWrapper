@@ -332,7 +332,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                         try {
                             HttpPost httppost = new HttpPost(_containerurl);
                             ByteArrayOutputStream arr = new ByteArrayOutputStream();
-                            XmiCasSerializer.serialize(jc.getCas(), _engine_typesystem, arr);
+                            XmiCasSerializer.serialize(jc.getCas(), arr);
 
                             HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
                             httppost.setEntity(entity);
@@ -374,7 +374,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                             HttpPost httppost = new HttpPost(_containerurl);
                             ByteArrayOutputStream arr = new ByteArrayOutputStream();
                             XmiSerializationSharedData sharedData = new XmiSerializationSharedData();
-                            XmiCasSerializer.serialize(jc.getCas(), _engine_typesystem, arr, false, sharedData, null, true);
+                            XmiCasSerializer.serialize(jc.getCas(),arr);
 
                             HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
                             httppost.setEntity(entity);
@@ -533,7 +533,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
             try {
                 HttpPost httppost = new HttpPost(_containerurl);
                 ByteArrayOutputStream arr = new ByteArrayOutputStream();
-                XmiCasSerializer.serialize(aJCas.getCas(),_engine_typesystem,arr);
+                XmiCasSerializer.serialize(aJCas.getCas(),arr);
 
                 HttpEntity entity = new InputStreamEntity(new ByteArrayInputStream(arr.toByteArray()), ContentType.TEXT_XML);
                 httppost.setEntity(entity);
