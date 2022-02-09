@@ -348,7 +348,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                             httpresp.close();
                         }
                         catch(Exception e) {
-
+                            e.printStackTrace();
                         }
                         System.out.println("Waiting for container to come alive!");
                         Thread.sleep(1000);
@@ -390,7 +390,7 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                             httpresp.close();
                         }
                         catch(Exception e) {
-
+                            e.printStackTrace();
                         }
                         System.out.println("Waiting for container to come alive!");
                         Thread.sleep(1000);
