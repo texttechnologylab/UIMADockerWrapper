@@ -326,9 +326,9 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                     jc.setDocumentText("This is a simple test");
                     jc.setDocumentLanguage("en");
                     Thread.sleep(2000);
-                    CloseableHttpClient httpclient = HttpClients.custom()
-                                .setConnectionManager(_poolingConnManager).build();
                     while(true) {
+                        CloseableHttpClient httpclient = HttpClients.createDefault();
+
                         try {
                             HttpPost httppost = new HttpPost(_containerurl);
                             ByteArrayOutputStream arr = new ByteArrayOutputStream();
@@ -346,11 +346,13 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                                 break;
                             }
                             httpresp.close();
+
                         }
                         catch(Exception e) {
                             e.printStackTrace();
                         }
                         System.out.println("Waiting for container to come alive!");
+                        httpclient.close();
                         Thread.sleep(1000);
                     }
                         System.out.println("Container up and running!");
