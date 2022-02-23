@@ -237,11 +237,19 @@ public class DockerGeneralInterface {
         return -1;
     }
 
-    public String build(Path builddir) {
-        String img_id = _docker.buildImageCmd().withPull(true)
+    public String build(Path builddir, List<String> buildArgs) {
+        BuildImageCmd buildCmd = _docker.buildImageCmd().withPull(true)
                 .withBaseDirectory(builddir.toFile())
-                .withDockerfile(Paths.get(builddir.toString(),"dockerfile").toFile())
-                .exec(new BuildImageProgress()).awaitImageId();
+                .withDockerfile(Paths.get(builddir.toString(),"dockerfile").toFile());
+
+        for (String buildArg : buildArgs) {
+            String[] fields = buildArg.split("=", 2);
+            String key = fields[0].trim();
+            String value = fields[1].trim();
+            buildCmd.withBuildArg(key, value);
+        }
+
+        String img_id = buildCmd.exec(new BuildImageProgress()).awaitImageId();
         return img_id;
     }
 

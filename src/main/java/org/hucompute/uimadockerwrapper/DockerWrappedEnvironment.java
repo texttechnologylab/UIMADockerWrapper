@@ -16,6 +16,7 @@ import org.apache.uima.util.InvalidXMLException;
 import org.hucompute.uimadockerwrapper.base_env.DockerBaseJavaEnv;
 import org.hucompute.uimadockerwrapper.base_env.IDockerBaseEnv;
 import org.hucompute.uimadockerwrapper.util.AnnotatorDescription;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.xml.sax.SAXException;
 
@@ -39,6 +40,8 @@ import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDesc
  * method.
  */
 public class DockerWrappedEnvironment {
+    private List<String> _docker_build_args;
+
     /**
      * The Map is dividided like this: Map<The path in the container, the content of the ressource>.
      */
@@ -125,6 +128,8 @@ public class DockerWrappedEnvironment {
      * with maven installed. The default pom file installs this library and the dependencies of it.
      */
     private DockerWrappedEnvironment(AnalysisEngineDescription base, AnalysisEngineDescription ...others) throws ResourceInitializationException, IOException, SAXException, InvalidXMLException {
+        _docker_build_args = new LinkedList<>();
+
         _to_view = "";
         _ressources = new HashMap<String,byte[]>();
         withResource("dockerfile", new DockerBaseJavaEnv().get_assembled_dockerfile());
@@ -235,6 +240,17 @@ public class DockerWrappedEnvironment {
 
     public DockerWrappedEnvironment withResource(String path, byte[] content) {
         _ressources.put(RESSOURCE_TYPE_BINARY+path,content);
+        return this;
+    }
+
+    // "key=value"
+    public DockerWrappedEnvironment withDockerBuildArg(String arg) {
+        _docker_build_args.add(arg);
+        return this;
+    }
+
+    public DockerWrappedEnvironment withDockerBuildArg(String key, String value) {
+        _docker_build_args.add(key + "=" + value);
         return this;
     }
 
@@ -426,6 +442,12 @@ public class DockerWrappedEnvironment {
             }
         }
 
+        _docker_build_args = new LinkedList<>();
+        JSONArray docker_build_args = js.getJSONArray("docker_build_args");
+        for(int i = 0; i < docker_build_args.length(); i++) {
+            _docker_build_args.add(docker_build_args.getString(i));
+        }
+
         Path tmpfile = Files.createTempFile("reproanno",".xml");
         Files.write(tmpfile, _engine_serialized.getBytes(StandardCharsets.UTF_8));
         _engine = AnalysisEngineFactory.createEngineDescriptionFromPath(tmpfile.toString());
@@ -555,7 +577,8 @@ public class DockerWrappedEnvironment {
                 UIMADockerWrapper.PARAM_ASYNC_SCALEOUT_MAX_DEPLOYMENTS, container_config.getContainerScalout(),
                 UIMADockerWrapper.PARAM_ASYNC_SCALEOUT_ASYNC_SCALEOUT_TYPE, container_config.getContainerScaleType().name(),
                 UIMADockerWrapper.PARAM_REGISTRY_TAG_NAME,container_config.getContainerTagName(),
-                UIMADockerWrapper.PARAM_AUTO_STOP,container_config.get_autostop());
+                UIMADockerWrapper.PARAM_AUTO_STOP,container_config.get_autostop(),
+                UIMADockerWrapper.PARAM_DOCKER_BUILD_ARGS, container_config.get_docker_build_args());
     }
 
     /**
@@ -690,7 +713,16 @@ public class DockerWrappedEnvironment {
         js.put("compression",_compression);
         js.put("to_view",_to_view);
         js.put("resources",getRessources());
+        js.put("docker_build_args", getDockerBuildArgs());
         return js.toString();
+    }
+
+    private JSONArray getDockerBuildArgs() {
+        JSONArray jsonArray = new JSONArray();
+        for (String arg : _docker_build_args) {
+            jsonArray.put(arg);
+        }
+        return jsonArray;
     }
 
     public JSONObject getRessourcesBase64() {
