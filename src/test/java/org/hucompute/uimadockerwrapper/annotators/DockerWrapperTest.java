@@ -197,6 +197,14 @@ public class DockerWrapperTest {
                 .with_gpu(true)
                 .with_unsafe_running_container_id("6b5ca96930c7");
 
+        DockerBaseJavaEnv env = new DockerBaseJavaEnv();
+        env.add_raw_dockercmd("ADD https://www.google.de ./model1");
+        env.add_raw_dockercmd("ADD ./model1 ./model1");
+        env.add_raw_dockercmd("ADD ./model1 ./model1");
+
+        DockerWrappedEnvironment environ = DockerWrappedEnvironment.from(AnalysisEngineFactory.createEngineDescription(OpenNlpSegmenter.class));
+        environ.with_dockerfile(env);
+
         JCas jc = JCasFactory.createJCas();
         jc.setDocumentText("This is a very simple text.");
         jc.setDocumentLanguage("en");
