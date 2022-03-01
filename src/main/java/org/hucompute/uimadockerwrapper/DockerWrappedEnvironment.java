@@ -762,4 +762,8 @@ public class DockerWrappedEnvironment {
         }
         return resources;
     }
+
+    public List<String> get_docker_build_args() {
+        return _docker_build_args;
+    }
 }

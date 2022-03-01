@@ -50,7 +50,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -325,7 +328,24 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                     Files.write(Paths.get(tempdir.toString(), "cfg"), _cfg_string.getBytes(StandardCharsets.UTF_8));
                     _docker_interface = new DockerGeneralInterface();
 
-                    String image_id = _docker_interface.build(tempdir, _docker_build_args);
+                    // combine docker build args from environment and config
+                    List<String> allDockerBuildArgs = new ArrayList<>();
+                    Set<String> allDockerBuildArgsKeys = new HashSet<>();
+                    for (String buildArg : _configuration.get_docker_build_args()) {
+                        String[] fields = buildArg.split("=", 2);
+                        String key = fields[0].trim();
+                        allDockerBuildArgsKeys.add(key);
+                        allDockerBuildArgs.add(buildArg);
+                    }
+                    for (String buildArg : _docker_build_args) {
+                        String[] fields = buildArg.split("=", 2);
+                        String key = fields[0].trim();
+                        if (allDockerBuildArgsKeys.contains(key)) {
+                            System.out.println("Warning: The Docker build argument '" + key + "' set by environment is overwritten by config!");
+                        }
+                        allDockerBuildArgs.add(buildArg);
+                    }
+                    String image_id = _docker_interface.build(tempdir, allDockerBuildArgs);
                     if(_async_scalout==1) {
                         _containerid = _docker_interface.run(image_id, _use_gpu, _autoremove, _reuse_container, _container_name
                                 , _unsafe_map_daemon);
