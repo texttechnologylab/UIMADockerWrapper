@@ -94,6 +94,8 @@ public class DockerWrapperContainerConfiguration {
      */
     private boolean _auto_stop;
 
+    private List<String> _docker_build_args;
+
     /**
      * Creates the default DockerWrapperConfiguration. This includes confirm_integrity = true, run in container = true,
      * container name = "", use gpu = true, autoremove = true, export name = "", reuse container = false, module classes empty,
@@ -133,6 +135,7 @@ public class DockerWrapperContainerConfiguration {
         _scale = 1;
         _auto_stop = true;
         _tag_name = "localhost/reproanno";
+        _docker_build_args = new LinkedList<>();
     }
 
     /**
@@ -166,6 +169,12 @@ public class DockerWrapperContainerConfiguration {
         for(int i = 0; i < arr2.length(); i++) {
             _module_configs.add(arr2.getString(i));
         }
+
+        _docker_build_args = new LinkedList<>();
+        JSONArray arr3 = js.getJSONArray("docker_build_args");
+        for(int i = 0; i < arr3.length(); i++) {
+            _docker_build_args.add(arr3.getString(i));
+        }
     }
 
     /**
@@ -190,6 +199,7 @@ public class DockerWrapperContainerConfiguration {
         obj.put("scaletype",_scale_type.name());
         obj.put("tag_name",_tag_name);
         obj.put("auto_stop",_auto_stop);
+        obj.put("docker_build_args", _docker_build_args);
         return obj.toString();
     }
 
@@ -202,6 +212,17 @@ public class DockerWrapperContainerConfiguration {
     public DockerWrapperContainerConfiguration with_module(Class<? extends IDockerWrapperModule> clazz, String configuration) {
         _module_classes.add(clazz.getName());
         _module_configs.add(configuration);
+        return this;
+    }
+
+    // "key=value"
+    public DockerWrapperContainerConfiguration with_build_arg(String arg) {
+        _docker_build_args.add(arg);
+        return this;
+    }
+
+    public DockerWrapperContainerConfiguration with_build_arg(String key, String value) {
+        _docker_build_args.add(key + "=" + value);
         return this;
     }
 
@@ -457,5 +478,9 @@ public class DockerWrapperContainerConfiguration {
     public DockerWrapperContainerConfiguration with_export_to_new_image(String repository_name, String tag_name) {
         _export_name = repository_name+"!"+tag_name;
         return this;
+    }
+
+    public List<String> get_docker_build_args() {
+        return _docker_build_args;
     }
 }

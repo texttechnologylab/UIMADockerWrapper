@@ -1,15 +1,5 @@
 package org.hucompute.uimadockerwrapper;
 
-import java.io.*;
-import java.lang.reflect.InvocationTargetException;
-import java.net.Socket;
-import java.nio.file.Path;
-
-import org.hucompute.uimadockerwrapper.modules.DockerWrapperModuleErrorImplementation;
-import org.hucompute.uimadockerwrapper.modules.IDockerWrapperModule;
-import org.hucompute.uimadockerwrapper.remote.InContainerEngineProcessor;
-import org.hucompute.uimadockerwrapper.util.DockerWrapperUtil;
-import org.hucompute.uimadockerwrapper.util.InputOutputBuffer;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
@@ -26,8 +16,11 @@ import org.apache.hc.core5.util.TimeValue;
 import org.apache.hc.core5.util.Timeout;
 import org.apache.uima.UIMAException;
 import org.apache.uima.UimaContext;
-import org.apache.uima.analysis_engine.*;
-import org.apache.uima.cas.*;
+import org.apache.uima.analysis_engine.AnalysisEngineDescription;
+import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
+import org.apache.uima.analysis_engine.ResultSpecification;
+import org.apache.uima.cas.CASException;
+import org.apache.uima.cas.TypeSystem;
 import org.apache.uima.cas.impl.*;
 import org.apache.uima.fit.component.JCasAnnotator_ImplBase;
 import org.apache.uima.fit.descriptor.ConfigurationParameter;
@@ -36,14 +29,31 @@ import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.resource.metadata.TypeSystemDescription;
-import org.apache.uima.util.*;
+import org.apache.uima.util.CasCreationUtils;
+import org.apache.uima.util.InvalidXMLException;
+import org.apache.uima.util.TypeSystemUtil;
+import org.apache.uima.util.XMLSerializer;
+import org.hucompute.uimadockerwrapper.modules.DockerWrapperModuleErrorImplementation;
+import org.hucompute.uimadockerwrapper.modules.IDockerWrapperModule;
+import org.hucompute.uimadockerwrapper.remote.InContainerEngineProcessor;
+import org.hucompute.uimadockerwrapper.util.DockerWrapperUtil;
+import org.hucompute.uimadockerwrapper.util.InputOutputBuffer;
 import org.xml.sax.SAXException;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -168,6 +178,10 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
     @ConfigurationParameter(name=PARAM_AUTO_STOP, mandatory = false)
     private boolean _auto_stop;
 
+    public static final String PARAM_DOCKER_BUILD_ARGS = "TEXTTECHNOLOGYLAB_DOCKER_BUILD_ARGS";
+    @ConfigurationParameter(name=PARAM_DOCKER_BUILD_ARGS, mandatory = false)
+    private List<String> _docker_build_args;
+
     private long _dockerport;
 
     private AtomicBoolean _shutdown;
@@ -198,7 +212,9 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                 UIMADockerWrapper.PARAM_MAP_DOECKER_DAEMON, false,
                 UIMADockerWrapper.PARAM_CONTAINER_ID,container_config.get_unsafe_running_container_id(),
                 UIMADockerWrapper.PARAM_ADDITIONAL_MODULES, container_config.get_additional_modules(),
-                UIMADockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations());
+                UIMADockerWrapper.PARAM_ADDITIONAL_MODULES_CONFIGURATION,container_config.get_module_configurations(),
+                UIMADockerWrapper.PARAM_DOCKER_BUILD_ARGS, container_config.get_docker_build_args()
+                );
         return temp;
     }
 
@@ -312,7 +328,24 @@ public class UIMADockerWrapper extends JCasAnnotator_ImplBase {
                     Files.write(Paths.get(tempdir.toString(), "cfg"), _cfg_string.getBytes(StandardCharsets.UTF_8));
                     _docker_interface = new DockerGeneralInterface();
 
-                    String image_id = _docker_interface.build(tempdir);
+                    // combine docker build args from environment and config
+                    List<String> allDockerBuildArgs = new ArrayList<>();
+                    Set<String> allDockerBuildArgsKeys = new HashSet<>();
+                    for (String buildArg : _configuration.get_docker_build_args()) {
+                        String[] fields = buildArg.split("=", 2);
+                        String key = fields[0].trim();
+                        allDockerBuildArgsKeys.add(key);
+                        allDockerBuildArgs.add(buildArg);
+                    }
+                    for (String buildArg : _docker_build_args) {
+                        String[] fields = buildArg.split("=", 2);
+                        String key = fields[0].trim();
+                        if (allDockerBuildArgsKeys.contains(key)) {
+                            System.out.println("Warning: The Docker build argument '" + key + "' set by environment is overwritten by config!");
+                        }
+                        allDockerBuildArgs.add(buildArg);
+                    }
+                    String image_id = _docker_interface.build(tempdir, allDockerBuildArgs);
                     if(_async_scalout==1) {
                         _containerid = _docker_interface.run(image_id, _use_gpu, _autoremove, _reuse_container, _container_name
                                 , _unsafe_map_daemon);
